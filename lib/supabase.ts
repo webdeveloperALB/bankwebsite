@@ -302,6 +302,29 @@ export type Database = {
           status?: string;
         };
       };
+      message_read_status: {
+        Row: {
+          id: string;
+          user_id: string;
+          message_id: string;
+          read_at: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          message_id: string;
+          read_at?: string;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          message_id?: string;
+          read_at?: string;
+          created_at?: string;
+        };
+      };
     };
   };
 };

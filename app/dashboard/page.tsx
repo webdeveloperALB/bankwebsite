@@ -19,6 +19,9 @@ import {
   TrendingUp,
   Users,
   DollarSign,
+  MessageSquare,
+  Mail,
+  MailOpen,
 } from "lucide-react";
 import { Database } from "@/lib/supabase";
 import {
@@ -31,14 +34,17 @@ type User = Database["public"]["Tables"]["users"]["Row"];
 type Balance = Database["public"]["Tables"]["balances"]["Row"];
 type CryptoBalance = Database["public"]["Tables"]["crypto_balances"]["Row"];
 type Transaction = Database["public"]["Tables"]["transactions"]["Row"];
+type Message = Database["public"]["Tables"]["messages"]["Row"];
+type MessageReadStatus =
+  Database["public"]["Tables"]["message_read_status"]["Row"];
 
 function CurrencyIcon({ currency }: { currency: string }) {
   const [hasError, setHasError] = useState(false);
 
   const currencyLogos: { [key: string]: string } = {
-    USD: "/icons/dollar.png",
-    EUR: "/icons/euro.png",
-    GBP: "/icons/pound.png",
+    USD: "/icons/usd.svg",
+    EUR: "/icons/eur.svg",
+    GBP: "/icons/gbp.svg",
   };
 
   if (hasError) {
@@ -89,6 +95,9 @@ export default function DashboardPage() {
   const [recentTransactions, setRecentTransactions] = useState<Transaction[]>(
     []
   );
+  const [latestMessage, setLatestMessage] = useState<Message | null>(null);
+  const [unreadMessages, setUnreadMessages] = useState(0);
+  const [markingAsRead, setMarkingAsRead] = useState(false);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -124,6 +133,34 @@ export default function DashboardPage() {
           .limit(5);
 
         setRecentTransactions(transactionsData || []);
+
+        // Load latest message and unread count
+        const { data: messagesData } = await supabase
+          .from("messages")
+          .select("*")
+          .eq("user_id", currentUser.id)
+          .order("created_at", { ascending: false })
+          .limit(1);
+
+        if (messagesData && messagesData.length > 0) {
+          setLatestMessage(messagesData[0]);
+        }
+
+        // Count unread messages (admin messages not in read status)
+        const { data: unreadData } = await supabase
+          .from("messages")
+          .select(
+            `
+            id,
+            from_admin,
+            message_read_status!left(id)
+          `
+          )
+          .eq("user_id", currentUser.id)
+          .eq("from_admin", true)
+          .is("message_read_status.id", null);
+
+        setUnreadMessages(unreadData?.length || 0);
 
         // Set up real-time subscriptions
         const balancesChannel = supabase
@@ -188,10 +225,87 @@ export default function DashboardPage() {
           )
           .subscribe();
 
+        const messagesChannel = supabase
+          .channel("messages")
+          .on(
+            "postgres_changes",
+            {
+              event: "*",
+              schema: "public",
+              table: "messages",
+              filter: `user_id=eq.${currentUser.id}`,
+            },
+            () => {
+              // Reload latest message
+              supabase
+                .from("messages")
+                .select("*")
+                .eq("user_id", currentUser.id)
+                .order("created_at", { ascending: false })
+                .limit(1)
+                .then(({ data }) => {
+                  if (data && data.length > 0) {
+                    setLatestMessage(data[0]);
+                  }
+                });
+
+              // Update unread count
+              supabase
+                .from("messages")
+                .select(
+                  `
+                  id,
+                  from_admin,
+                  message_read_status!left(id)
+                `
+                )
+                .eq("user_id", currentUser.id)
+                .eq("from_admin", true)
+                .is("message_read_status.id", null)
+                .then(({ data }) => {
+                  setUnreadMessages(data?.length || 0);
+                });
+            }
+          )
+          .subscribe();
+
+        const readStatusChannel = supabase
+          .channel("message_read_status")
+          .on(
+            "postgres_changes",
+            {
+              event: "*",
+              schema: "public",
+              table: "message_read_status",
+              filter: `user_id=eq.${currentUser.id}`,
+            },
+            () => {
+              // Update unread count when read status changes
+              supabase
+                .from("messages")
+                .select(
+                  `
+                  id,
+                  from_admin,
+                  message_read_status!left(id)
+                `
+                )
+                .eq("user_id", currentUser.id)
+                .eq("from_admin", true)
+                .is("message_read_status.id", null)
+                .then(({ data }) => {
+                  setUnreadMessages(data?.length || 0);
+                });
+            }
+          )
+          .subscribe();
+
         return () => {
           supabase.removeChannel(balancesChannel);
           supabase.removeChannel(cryptoChannel);
           supabase.removeChannel(transactionsChannel);
+          supabase.removeChannel(messagesChannel);
+          supabase.removeChannel(readStatusChannel);
         };
       } catch (error) {
         console.error("Error loading dashboard:", error);
@@ -217,6 +331,50 @@ export default function DashboardPage() {
     const price = getCryptoPrice(crypto.crypto);
     return sum + Number(crypto.amount) * price;
   }, 0);
+
+  const markMessageAsRead = async (messageId: string) => {
+    if (!user) return;
+
+    setMarkingAsRead(true);
+
+    try {
+      // Insert read status (will be ignored if already exists due to UNIQUE constraint)
+      const { error } = await supabase.from("message_read_status").upsert(
+        {
+          user_id: user.id,
+          message_id: messageId,
+        },
+        {
+          onConflict: "user_id,message_id",
+        }
+      );
+
+      if (error) throw error;
+
+      // Log activity
+      await supabase.from("activity_logs").insert({
+        user_id: user.id,
+        activity: "Marked message as read",
+      });
+    } catch (error) {
+      console.error("Error marking message as read:", error);
+    } finally {
+      setMarkingAsRead(false);
+    }
+  };
+
+  const isMessageRead = async (messageId: string): Promise<boolean> => {
+    if (!user) return false;
+
+    const { data } = await supabase
+      .from("message_read_status")
+      .select("id")
+      .eq("user_id", user.id)
+      .eq("message_id", messageId)
+      .single();
+
+    return !!data;
+  };
 
   return (
     <DashboardLayout currentSection="dashboard">
@@ -375,56 +533,150 @@ export default function DashboardPage() {
           )}
         </div>
 
-        {/* Recent Transactions */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Recent Transactions</CardTitle>
-            <CardDescription>Your latest financial activity</CardDescription>
-          </CardHeader>
-          <CardContent>
-            {loading ? (
-              <div className="space-y-4">
-                {[1, 2, 3].map((i) => (
-                  <div key={i} className="animate-pulse flex justify-between">
-                    <div className="h-4 bg-gray-200 rounded w-32"></div>
-                    <div className="h-4 bg-gray-200 rounded w-20"></div>
-                  </div>
-                ))}
+        {/* Messages and Transactions Row */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Latest Message Card */}
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
+              <div className="flex items-center space-x-2">
+                <MessageSquare className="h-5 w-5 text-blue-600" />
+                <CardTitle className="text-lg">Latest Message</CardTitle>
               </div>
-            ) : recentTransactions.length > 0 ? (
-              <div className="space-y-4">
-                {recentTransactions.map((transaction) => (
-                  <div
-                    key={transaction.id}
-                    className="flex justify-between items-center py-2 border-b last:border-b-0"
+              {unreadMessages > 0 && (
+                <div className="flex items-center space-x-2">
+                  <span className="bg-red-500 text-white text-xs px-2 py-1 rounded-full">
+                    {unreadMessages} unread
+                  </span>
+                </div>
+              )}
+            </CardHeader>
+            <CardContent>
+              {loading ? (
+                <div className="animate-pulse space-y-3">
+                  <div className="h-4 bg-gray-200 rounded w-3/4"></div>
+                  <div className="h-3 bg-gray-200 rounded w-1/2"></div>
+                </div>
+              ) : latestMessage ? (
+                <div className="space-y-3">
+                  <div className="flex items-start space-x-3">
+                    <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
+                      {latestMessage.from_admin ? (
+                        <Mail className="h-4 w-4 text-blue-600" />
+                      ) : (
+                        <MailOpen className="h-4 w-4 text-gray-600" />
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between mb-1">
+                        <p className="text-sm font-medium text-gray-900">
+                          {latestMessage.from_admin ? "Support Team" : "You"}
+                        </p>
+                        <p className="text-xs text-gray-500">
+                          {new Date(
+                            latestMessage.created_at
+                          ).toLocaleDateString()}
+                        </p>
+                      </div>
+                      <p className="text-sm text-gray-700 line-clamp-2">
+                        {latestMessage.message.length > 100
+                          ? `${latestMessage.message.substring(0, 100)}...`
+                          : latestMessage.message}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex justify-between items-center pt-2 border-t">
+                    <a
+                      href="/dashboard/messages"
+                      className="text-sm text-blue-600 hover:text-blue-700 font-medium"
+                    >
+                      View all messages
+                    </a>
+                    <div className="flex items-center space-x-2 text-xs text-gray-500">
+                      {latestMessage.from_admin ? (
+                        <span className="flex items-center">
+                          <Mail className="h-3 w-3 mr-1" />
+                          Unread
+                        </span>
+                      ) : (
+                        <span className="flex items-center">
+                          <MailOpen className="h-3 w-3 mr-1" />
+                          Sent
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="text-center py-6">
+                  <MessageSquare className="h-8 w-8 text-gray-400 mx-auto mb-2" />
+                  <p className="text-sm text-gray-500 mb-2">No messages yet</p>
+                  <a
+                    href="/dashboard/messages"
+                    className="text-sm text-blue-600 hover:text-blue-700 font-medium"
                   >
-                    <div>
-                      <p className="text-sm font-medium capitalize">
-                        {transaction.type}
-                      </p>
-                      <p className="text-xs text-gray-500">
-                        {new Date(transaction.created_at).toLocaleDateString()}
-                      </p>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-sm font-medium">
-                        {Number(transaction.amount).toLocaleString("en-US", {
-                          minimumFractionDigits: 2,
-                        })}{" "}
-                        {transaction.currency}
-                      </p>
-                      <p className="text-xs text-gray-500">
-                        {transaction.type}
-                      </p>
-                    </div>
-                  </div>
-                ))}
+                    Start a conversation
+                  </a>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Recent Transactions */}
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
+              <div className="flex items-center space-x-2">
+                <ArrowUpDown className="h-5 w-5 text-green-600" />
+                <CardTitle className="text-lg">Recent Transactions</CardTitle>
               </div>
-            ) : (
-              <p className="text-sm text-gray-500">No transactions yet</p>
-            )}
-          </CardContent>
-        </Card>
+            </CardHeader>
+            <CardContent>
+              <CardDescription>Your latest financial activity</CardDescription>
+              {loading ? (
+                <div className="space-y-4">
+                  {[1, 2, 3].map((i) => (
+                    <div key={i} className="animate-pulse flex justify-between">
+                      <div className="h-4 bg-gray-200 rounded w-32"></div>
+                      <div className="h-4 bg-gray-200 rounded w-20"></div>
+                    </div>
+                  ))}
+                </div>
+              ) : recentTransactions.length > 0 ? (
+                <div className="space-y-4">
+                  {recentTransactions.map((transaction) => (
+                    <div
+                      key={transaction.id}
+                      className="flex justify-between items-center"
+                    >
+                      <div>
+                        <p className="text-sm font-medium">
+                          {transaction.type}
+                        </p>
+                        <p className="text-xs text-gray-500">
+                          {new Date(
+                            transaction.created_at
+                          ).toLocaleDateString()}
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-sm font-medium">
+                          {transaction.amount} {transaction.currency}
+                        </p>
+                        <p className="text-xs text-gray-500">
+                          {transaction.type}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-6">
+                  <ArrowUpDown className="h-8 w-8 text-gray-400 mx-auto mb-2" />
+                  <p className="text-sm text-gray-500">No transactions yet</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
       </div>
     </DashboardLayout>
   );
