@@ -42,9 +42,9 @@ function CurrencyIcon({ currency }: { currency: string }) {
   const [hasError, setHasError] = useState(false);
 
   const currencyLogos: { [key: string]: string } = {
-    USD: "/icons/usd.svg",
-    EUR: "/icons/eur.svg",
-    GBP: "/icons/gbp.svg",
+    USD: "/icons/dollar.png",
+    EUR: "/icons/euro.png",
+    GBP: "/icons/pound.png",
   };
 
   if (hasError) {
