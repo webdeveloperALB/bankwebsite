@@ -97,6 +97,7 @@ export default function DashboardPage() {
   );
   const [latestMessage, setLatestMessage] = useState<Message | null>(null);
   const [unreadMessages, setUnreadMessages] = useState(0);
+  const [latestMessageRead, setLatestMessageRead] = useState(false);
   const [markingAsRead, setMarkingAsRead] = useState(false);
   const [loading, setLoading] = useState(true);
 
@@ -161,6 +162,24 @@ export default function DashboardPage() {
           .is("message_read_status.id", null);
 
         setUnreadMessages(unreadData?.length || 0);
+
+        // Check if latest message is read
+        if (
+          messagesData &&
+          messagesData.length > 0 &&
+          messagesData[0].from_admin
+        ) {
+          const { data: readStatus } = await supabase
+            .from("message_read_status")
+            .select("id")
+            .eq("user_id", currentUser.id)
+            .eq("message_id", messagesData[0].id)
+            .single();
+
+          setLatestMessageRead(!!readStatus);
+        } else {
+          setLatestMessageRead(true); // User messages are always "read"
+        }
 
         // Set up real-time subscriptions
         const balancesChannel = supabase
@@ -296,6 +315,19 @@ export default function DashboardPage() {
                 .then(({ data }) => {
                   setUnreadMessages(data?.length || 0);
                 });
+
+              // Update latest message read status
+              if (latestMessage && latestMessage.from_admin) {
+                supabase
+                  .from("message_read_status")
+                  .select("id")
+                  .eq("user_id", currentUser.id)
+                  .eq("message_id", latestMessage.id)
+                  .single()
+                  .then(({ data }) => {
+                    setLatestMessageRead(!!data);
+                  });
+              }
             }
           )
           .subscribe();
@@ -315,7 +347,7 @@ export default function DashboardPage() {
     };
 
     loadDashboardData();
-  }, []);
+  }, [latestMessage]);
 
   // Calculate REAL USD values using API exchange rates
   const totalFiatBalance = balances.reduce((sum, balance) => {
@@ -338,11 +370,12 @@ export default function DashboardPage() {
     setMarkingAsRead(true);
 
     try {
-      // Insert read status (will be ignored if already exists due to UNIQUE constraint)
+      // Insert or update read status
       const { error } = await supabase.from("message_read_status").upsert(
         {
           user_id: user.id,
           message_id: messageId,
+          read_at: new Date().toISOString(),
         },
         {
           onConflict: "user_id,message_id",
@@ -350,6 +383,25 @@ export default function DashboardPage() {
       );
 
       if (error) throw error;
+
+      // Update local state immediately
+      setLatestMessageRead(true);
+
+      // Refresh unread count
+      const { data: unreadData } = await supabase
+        .from("messages")
+        .select(
+          `
+          id,
+          from_admin,
+          message_read_status!left(id)
+        `
+        )
+        .eq("user_id", user.id)
+        .eq("from_admin", true)
+        .is("message_read_status.id", null);
+
+      setUnreadMessages(unreadData?.length || 0);
 
       // Log activity
       await supabase.from("activity_logs").insert({
@@ -542,13 +594,6 @@ export default function DashboardPage() {
                 <MessageSquare className="h-5 w-5 text-blue-600" />
                 <CardTitle className="text-lg">Latest Message</CardTitle>
               </div>
-              {unreadMessages > 0 && (
-                <div className="flex items-center space-x-2">
-                  <span className="bg-red-500 text-white text-xs px-2 py-1 rounded-full">
-                    {unreadMessages} unread
-                  </span>
-                </div>
-              )}
             </CardHeader>
             <CardContent>
               {loading ? (
@@ -591,16 +636,27 @@ export default function DashboardPage() {
                     >
                       View all messages
                     </a>
-                    <div className="flex items-center space-x-2 text-xs text-gray-500">
-                      {latestMessage.from_admin ? (
-                        <span className="flex items-center">
-                          <Mail className="h-3 w-3 mr-1" />
-                          Unread
+                    <div className="flex items-center space-x-2">
+                      {latestMessage.from_admin && !latestMessageRead ? (
+                        <button
+                          onClick={() => markMessageAsRead(latestMessage.id)}
+                          disabled={markingAsRead}
+                          className="flex items-center space-x-1 px-2 py-1 text-xs bg-red-100 text-red-700 rounded-full hover:bg-red-200 disabled:opacity-50 transition-colors"
+                        >
+                          <Mail className="h-3 w-3" />
+                          <span>
+                            {markingAsRead ? "Marking..." : "Mark as Read"}
+                          </span>
+                        </button>
+                      ) : latestMessage.from_admin && latestMessageRead ? (
+                        <span className="flex items-center space-x-1 px-2 py-1 text-xs bg-green-100 text-green-600 rounded-full">
+                          <MailOpen className="h-3 w-3" />
+                          <span>Read</span>
                         </span>
                       ) : (
-                        <span className="flex items-center">
-                          <MailOpen className="h-3 w-3 mr-1" />
-                          Sent
+                        <span className="flex items-center space-x-1 px-2 py-1 text-xs bg-gray-100 text-gray-600 rounded-full">
+                          <MailOpen className="h-3 w-3" />
+                          <span>Sent</span>
                         </span>
                       )}
                     </div>
