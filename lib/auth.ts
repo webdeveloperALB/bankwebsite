@@ -174,10 +174,11 @@ export async function getCurrentUser(): Promise<User | null> {
     if (adminSession) {
       try {
         const { user, timestamp } = JSON.parse(adminSession);
-        // Check if session is still valid (24 hours)
-        if (Date.now() - timestamp < 24 * 60 * 60 * 1000) {
+        // Check if session is still valid (20 minutes)
+        if (Date.now() - timestamp < 20 * 60 * 1000) {
           return user;
         } else {
+          console.log("🔒 Admin session expired after 20 minutes");
           localStorage.removeItem("admin_session");
         }
       } catch (error) {
@@ -205,15 +206,28 @@ export async function getCurrentUser(): Promise<User | null> {
 
 export async function getCurrentUserDirect(): Promise<User | null> {
   // Check for admin session first
-  const adminSession = localStorage.getItem("admin_session");
-  if (adminSession) {
-    const { data: adminUser } = await supabase
-      .from("users")
-      .select("*")
-      .eq("email", "admin@securebank.com")
-      .single();
+  if (typeof window !== "undefined") {
+    const adminSession = localStorage.getItem("admin_session");
+    if (adminSession) {
+      try {
+        const { user, timestamp } = JSON.parse(adminSession);
+        // Check if session is still valid (20 minutes)
+        if (Date.now() - timestamp < 20 * 60 * 1000) {
+          const { data: adminUser } = await supabase
+            .from("users")
+            .select("*")
+            .eq("email", "admin@securebank.com")
+            .single();
 
-    return adminUser;
+          return adminUser;
+        } else {
+          console.log("🔒 Admin session expired after 20 minutes");
+          localStorage.removeItem("admin_session");
+        }
+      } catch (error) {
+        localStorage.removeItem("admin_session");
+      }
+    }
   }
 
   // Get user from Supabase auth

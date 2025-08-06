@@ -28,6 +28,8 @@ import {
   convertCurrency,
   getCryptoPrice,
   getCurrencyRate,
+  subscribeToRateUpdates,
+  forceRateUpdate,
 } from "@/lib/exchange-rates";
 
 type User = Database["public"]["Tables"]["users"]["Row"];
@@ -100,8 +102,20 @@ export default function DashboardPage() {
   const [latestMessageRead, setLatestMessageRead] = useState(false);
   const [markingAsRead, setMarkingAsRead] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [rateRefreshKey, setRateRefreshKey] = useState(0);
 
+  // Force re-render when REAL exchange rates change
+  const forceRerender = () => {
+    setRateRefreshKey((prev) => prev + 1);
+    console.log("🔄 Dashboard re-rendering due to REAL rate changes");
+  };
   useEffect(() => {
+    // Subscribe to REAL-TIME exchange rate updates
+    const unsubscribeRates = subscribeToRateUpdates(forceRerender);
+
+    // Force initial rate update
+    forceRateUpdate();
+
     const loadDashboardData = async () => {
       try {
         const currentUser = await getCurrentUser();
@@ -333,6 +347,7 @@ export default function DashboardPage() {
           .subscribe();
 
         return () => {
+          unsubscribeRates();
           supabase.removeChannel(balancesChannel);
           supabase.removeChannel(cryptoChannel);
           supabase.removeChannel(transactionsChannel);
@@ -479,13 +494,14 @@ export default function DashboardPage() {
                         "en-US",
                         {
                           minimumFractionDigits: 2,
+                          maximumFractionDigits: 2,
                         }
                       )}{" "}
                       USD
                     </p>
                     <p className="text-xs text-gray-400 mt-1">
-                      Rate: 1 USD = {getCurrencyRate(currency).toFixed(4)}{" "}
-                      {currency}
+                      Rate: 1 {currency} = $
+                      {(1 / getCurrencyRate(currency)).toFixed(6)} USD
                     </p>
                     {amount === 0 && (
                       <p className="text-xs text-amber-600 mt-1 font-medium">
@@ -550,6 +566,7 @@ export default function DashboardPage() {
                       ≈ $
                       {usdValue.toLocaleString("en-US", {
                         minimumFractionDigits: 2,
+                        maximumFractionDigits: 8,
                       })}{" "}
                       USD
                     </p>
@@ -557,6 +574,7 @@ export default function DashboardPage() {
                       $
                       {getCryptoPrice(cryptoSymbol).toLocaleString("en-US", {
                         minimumFractionDigits: 2,
+                        maximumFractionDigits: 8,
                       })}{" "}
                       per {cryptoSymbol}
                     </p>

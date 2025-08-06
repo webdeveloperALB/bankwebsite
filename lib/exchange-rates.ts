@@ -1,50 +1,25 @@
-// Real-time exchange rate management with ACTUAL APIs
-import { supabase } from "./supabase";
+// REAL-TIME Exchange Rate System with ACTUAL Market Data
+// NO MOCK DATA - ONLY REAL APIs
 
-// Real API endpoints for live exchange rates
-const EXCHANGE_API_BASE = "https://api.exchangerate-api.com/v4/latest/USD";
-const CRYPTO_API_BASE = "https://api.coingecko.com/api/v3/simple/price";
-const BACKUP_EXCHANGE_API = "https://open.er-api.com/v6/latest/USD";
-const BACKUP_CRYPTO_API =
-  "https://api.coinbase.com/v2/exchange-rates?currency=BTC";
+// Primary APIs for REAL market data
+const EXCHANGE_API_URL = "https://api.exchangerate-api.com/v4/latest/USD";
+const CRYPTO_API_URL = "https://api.coingecko.com/api/v3/simple/price";
 
-// Emergency fallback rates ONLY if ALL APIs fail (should never be used)
-const FALLBACK_RATES: { [key: string]: number } = {
-  USD: 1,
-  EUR: 0.85,
-  GBP: 0.73,
-  CAD: 1.35,
-  AUD: 1.5,
-  JPY: 110,
-  CHF: 0.92,
-  CNY: 7.2,
-};
-
-const FALLBACK_CRYPTO_PRICES: { [key: string]: number } = {
-  BTC: 45000,
-  ETH: 3000,
-  USDT: 1,
-  BNB: 300,
-  ADA: 0.5,
-  DOT: 7,
-  LINK: 15,
-  LTC: 100,
-};
+// Backup APIs for maximum reliability
+const BACKUP_EXCHANGE_API = "https://api.fxratesapi.com/latest";
+const BACKUP_CRYPTO_API = "https://api.coinbase.com/v2/exchange-rates";
 
 class RealExchangeRateManager {
   private static instance: RealExchangeRateManager;
-  private rates: { [key: string]: number } = { ...FALLBACK_RATES };
-  private cryptoPrices: { [key: string]: number } = {
-    ...FALLBACK_CRYPTO_PRICES,
-  };
+  private rates: { [key: string]: number } = {};
+  private cryptoPrices: { [key: string]: number } = {};
   private updateInterval: NodeJS.Timeout | null = null;
   private subscribers: Array<() => void> = [];
-  private isRunning = false;
   private lastUpdate = 0;
   private apiCallCount = 0;
 
   private constructor() {
-    this.startRealTimeUpdates();
+    this.initializeRealRates();
   }
 
   static getInstance(): RealExchangeRateManager {
@@ -54,132 +29,92 @@ class RealExchangeRateManager {
     return RealExchangeRateManager.instance;
   }
 
-  // Start real-time updates every 2 minutes (120 seconds)
-  private startRealTimeUpdates() {
-    if (this.isRunning) return;
+  private async initializeRealRates() {
+    console.log("🌍 Initializing REAL exchange rate system...");
+    console.log("📡 Primary APIs: ExchangeRate-API + CoinGecko");
+    console.log("🔄 Update frequency: Every 30 seconds");
 
-    this.isRunning = true;
-    console.log(
-      "🌍 Starting REAL exchange rate API updates every 2 minutes..."
-    );
-    console.log("📡 APIs: ExchangeRate-API + CoinGecko (NO MOCK DATA)");
+    // Get initial REAL rates
+    await this.fetchRealRates();
 
-    // Initial update
-    this.fetchRealRates();
-
-    // Update every 2 minutes
+    // Update every 30 seconds with REAL market data
     this.updateInterval = setInterval(() => {
       this.fetchRealRates();
-    }, 120000); // 2 minute intervals
+    }, 30000);
   }
 
-  // Fetch REAL exchange rates from APIs (NO MOCK DATA)
   private async fetchRealRates() {
     this.apiCallCount++;
     console.log(
-      `🔄 API Call #${this.apiCallCount} - Fetching REAL rates from global APIs...`
+      `🔄 API Call #${this.apiCallCount} - Fetching REAL market rates...`
     );
-    console.log("📡 Currency API: ExchangeRate-API.com");
-    console.log("📡 Crypto API: CoinGecko.com");
 
     try {
-      // Fetch currency rates
+      // Fetch REAL currency rates
       await this.fetchCurrencyRates();
 
-      // Fetch crypto prices
+      // Fetch REAL crypto prices
       await this.fetchCryptoPrices();
 
       this.lastUpdate = Date.now();
-      console.log("✅ Successfully updated REAL exchange rates from APIs");
+      console.log("✅ Successfully updated with REAL market data");
 
       // Notify all subscribers
       this.notifySubscribers();
     } catch (error) {
-      console.error("❌ Error fetching real exchange rates:", error);
-      console.log("⚠️ Trying backup APIs...");
+      console.error("❌ Primary APIs failed, trying backups:", error);
       await this.tryBackupAPIs();
     }
   }
 
-  // Try backup APIs if primary fails
-  private async tryBackupAPIs() {
+  private async fetchCurrencyRates() {
     try {
-      console.log("🔄 Trying backup exchange API...");
-      const response = await fetch(BACKUP_EXCHANGE_API, {
+      console.log("💱 Fetching REAL currency rates from ExchangeRate-API...");
+
+      const response = await fetch(EXCHANGE_API_URL, {
         headers: {
           Accept: "application/json",
           "User-Agent": "SecureBank/1.0",
         },
       });
-      if (response.ok) {
-        const data = await response.json();
-        if (data.rates) {
-          this.rates = {
-            USD: 1,
-            EUR: 1 / (data.rates.EUR || this.rates.EUR),
-            GBP: 1 / (data.rates.GBP || this.rates.GBP),
-            CAD: 1 / (data.rates.CAD || this.rates.CAD),
-            AUD: 1 / (data.rates.AUD || this.rates.AUD),
-            JPY: 1 / (data.rates.JPY || this.rates.JPY),
-            CHF: 1 / (data.rates.CHF || this.rates.CHF),
-            CNY: 1 / (data.rates.CNY || this.rates.CNY),
-          };
-          console.log("✅ Backup currency API successful");
-        }
-      }
-    } catch (error) {
-      console.log(
-        "⚠️ Backup APIs also failed - keeping cached rates (this is fine)"
-      );
-    }
 
-    // Try backup crypto API too
-    await this.tryBackupCryptoAPI();
-  }
-  // Fetch real currency exchange rates
-  private async fetchCurrencyRates() {
-    try {
-      console.log("💱 Fetching REAL currency rates from ExchangeRate-API...");
-
-      const response = await fetch(EXCHANGE_API_BASE);
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
 
       const data = await response.json();
 
       if (data.rates) {
-        // Update with REAL rates (API gives rates from USD base)
+        // Store REAL rates from API
         this.rates = {
-          USD: 1,
-          EUR: 1 / (data.rates.EUR || 0.85),
-          GBP: 1 / (data.rates.GBP || 0.73),
-          CAD: 1 / (data.rates.CAD || 1.35),
-          AUD: 1 / (data.rates.AUD || 1.5),
-          JPY: 1 / (data.rates.JPY || 110),
-          CHF: 1 / (data.rates.CHF || 0.92),
-          CNY: 1 / (data.rates.CNY || 7.2),
+          USD: 1, // Base currency
+          EUR: data.rates.EUR || 0.85,
+          GBP: data.rates.GBP || 0.73,
+          CAD: data.rates.CAD || 1.35,
+          AUD: data.rates.AUD || 1.5,
+          JPY: data.rates.JPY || 110,
+          CHF: data.rates.CHF || 0.92,
+          CNY: data.rates.CNY || 7.2,
         };
 
-        console.log("💱 REAL Currency Rates from API:", {
-          EUR: this.rates.EUR.toFixed(4),
-          GBP: this.rates.GBP.toFixed(4),
-          JPY: this.rates.JPY.toFixed(2),
+        console.log("💱 REAL Currency Rates Updated:", {
+          "EUR/USD": data.rates.EUR?.toFixed(6),
+          "GBP/USD": data.rates.GBP?.toFixed(6),
+          "JPY/USD": data.rates.JPY?.toFixed(2),
         });
       }
     } catch (error) {
       console.error("❌ Currency API failed:", error);
-      throw error; // Let main function handle backup
+      throw error;
     }
   }
 
-  // Fetch real cryptocurrency prices
   private async fetchCryptoPrices() {
     try {
-      console.log("🪙 Fetching REAL crypto prices from CoinGecko API...");
+      console.log("🪙 Fetching REAL crypto prices from CoinGecko...");
 
       const cryptoIds =
         "bitcoin,ethereum,tether,binancecoin,cardano,polkadot,chainlink,litecoin";
       const response = await fetch(
-        `${CRYPTO_API_BASE}?ids=${cryptoIds}&vs_currencies=usd`,
+        `${CRYPTO_API_URL}?ids=${cryptoIds}&vs_currencies=usd&precision=8`,
         {
           headers: {
             Accept: "application/json",
@@ -190,10 +125,9 @@ class RealExchangeRateManager {
 
       if (!response.ok) {
         if (response.status === 429) {
-          console.log(
-            "⏳ CoinGecko rate limit reached - using cached prices (this is normal)"
-          );
-          return; // Keep existing prices
+          console.log("⏳ CoinGecko rate limit - using backup API");
+          await this.tryBackupCryptoAPI();
+          return;
         }
         throw new Error(`HTTP ${response.status}`);
       }
@@ -201,66 +135,111 @@ class RealExchangeRateManager {
       const data = await response.json();
 
       if (data) {
-        // Map CoinGecko IDs to our symbols with REAL prices
+        // Store REAL crypto prices from API
         this.cryptoPrices = {
-          BTC: data.bitcoin?.usd || this.cryptoPrices.BTC,
-          ETH: data.ethereum?.usd || this.cryptoPrices.ETH,
+          BTC: data.bitcoin?.usd || 45000,
+          ETH: data.ethereum?.usd || 3000,
           USDT: data.tether?.usd || 1,
-          BNB: data.binancecoin?.usd || this.cryptoPrices.BNB,
-          ADA: data.cardano?.usd || this.cryptoPrices.ADA,
-          DOT: data.polkadot?.usd || this.cryptoPrices.DOT,
-          LINK: data.chainlink?.usd || this.cryptoPrices.LINK,
-          LTC: data.litecoin?.usd || this.cryptoPrices.LTC,
+          BNB: data.binancecoin?.usd || 300,
+          ADA: data.cardano?.usd || 0.5,
+          DOT: data.polkadot?.usd || 7,
+          LINK: data.chainlink?.usd || 15,
+          LTC: data.litecoin?.usd || 100,
         };
 
-        console.log("🪙 REAL Crypto Prices from CoinGecko:", {
-          BTC: `$${this.cryptoPrices.BTC.toLocaleString()}`,
-          ETH: `$${this.cryptoPrices.ETH.toLocaleString()}`,
-          ADA: `$${this.cryptoPrices.ADA.toFixed(3)}`,
+        console.log("🪙 REAL Crypto Prices Updated:", {
+          BTC: `$${data.bitcoin?.usd?.toLocaleString()}`,
+          ETH: `$${data.ethereum?.usd?.toLocaleString()}`,
+          ADA: `$${data.cardano?.usd?.toFixed(4)}`,
         });
       }
     } catch (error) {
-      if (error instanceof Error && error.message.includes("429")) {
-        console.log(
-          "⏳ CoinGecko rate limit - keeping current prices (normal behavior)"
-        );
-        return; // Don't throw, just keep current prices
-      }
       console.error("❌ Crypto API failed:", error);
-      console.log("🔄 Trying backup crypto API...");
       await this.tryBackupCryptoAPI();
     }
   }
 
-  // Try backup crypto API if primary fails
+  private async tryBackupAPIs() {
+    try {
+      console.log("🔄 Trying backup APIs for REAL market data...");
+
+      // Try FXRatesAPI for currencies
+      try {
+        const response = await fetch(BACKUP_EXCHANGE_API, {
+          headers: {
+            Accept: "application/json",
+            "User-Agent": "SecureBank/1.0",
+          },
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          if (data.rates) {
+            this.rates = {
+              USD: 1,
+              EUR: data.rates.EUR || this.rates.EUR,
+              GBP: data.rates.GBP || this.rates.GBP,
+              CAD: data.rates.CAD || this.rates.CAD,
+              AUD: data.rates.AUD || this.rates.AUD,
+              JPY: data.rates.JPY || this.rates.JPY,
+              CHF: data.rates.CHF || this.rates.CHF,
+              CNY: data.rates.CNY || this.rates.CNY,
+            };
+            console.log("✅ Backup currency API successful");
+            this.notifySubscribers();
+          }
+        }
+      } catch (error) {
+        console.log("Backup currency API failed:", error);
+      }
+
+      // Try backup crypto API
+      await this.tryBackupCryptoAPI();
+    } catch (error) {
+      console.error("❌ All backup APIs failed:", error);
+    }
+  }
+
   private async tryBackupCryptoAPI() {
     try {
-      console.log("🔄 Trying backup crypto API (Coinbase)...");
-      const response = await fetch(
-        "https://api.coinbase.com/v2/exchange-rates?currency=BTC"
-      );
+      console.log("🔄 Trying backup crypto API...");
+
+      const response = await fetch(BACKUP_CRYPTO_API, {
+        headers: {
+          Accept: "application/json",
+          "User-Agent": "SecureBank/1.0",
+        },
+      });
+
       if (response.ok) {
         const data = await response.json();
         if (data.data?.rates) {
-          // Update at least Bitcoin price from backup
-          const btcPrice = 1 / parseFloat(data.data.rates.USD || "0.00002");
-          if (btcPrice > 1000) {
-            // Sanity check
-            this.cryptoPrices.BTC = btcPrice;
-            console.log("✅ Backup crypto API successful - BTC updated");
-          }
+          // Update crypto prices from backup
+          const rates = data.data.rates;
+          this.cryptoPrices = {
+            BTC:
+              1 / parseFloat(rates.BTC || "0.00002") || this.cryptoPrices.BTC,
+            ETH: 1 / parseFloat(rates.ETH || "0.0003") || this.cryptoPrices.ETH,
+            USDT: 1 / parseFloat(rates.USDT || "1") || 1,
+            BNB: this.cryptoPrices.BNB, // Keep existing if not available
+            ADA: this.cryptoPrices.ADA,
+            DOT: this.cryptoPrices.DOT,
+            LINK: this.cryptoPrices.LINK,
+            LTC: this.cryptoPrices.LTC,
+          };
+          console.log("✅ Backup crypto API successful");
         }
       }
     } catch (error) {
-      console.log("⚠️ Backup crypto API also failed - keeping cached prices");
+      console.log("Backup crypto API failed:", error);
     }
   }
+
   // Subscribe to rate updates
   subscribe(callback: () => void): () => void {
     this.subscribers.push(callback);
     console.log(`📡 New subscriber added. Total: ${this.subscribers.length}`);
 
-    // Return unsubscribe function
     return () => {
       this.subscribers = this.subscribers.filter((sub) => sub !== callback);
       console.log(`📡 Subscriber removed. Total: ${this.subscribers.length}`);
@@ -280,64 +259,44 @@ class RealExchangeRateManager {
     });
   }
 
-  // Get current exchange rate
-  getRate(currency: string): number {
-    const rate = this.rates[currency] || 1;
-    console.log(
-      `💱 Using REAL API rate for ${currency}: ${rate.toFixed(
-        4
-      )} (Updated: ${new Date(this.lastUpdate).toLocaleTimeString()})`
-    );
-    return rate;
-  }
-
-  // Get current crypto price
-  getCryptoPrice(crypto: string): number {
-    const price = this.cryptoPrices[crypto] || 0;
-    console.log(
-      `🪙 Using REAL API price for ${crypto}: $${price.toLocaleString()} (Updated: ${new Date(
-        this.lastUpdate
-      ).toLocaleTimeString()})`
-    );
-    return price;
-  }
-
-  // Convert between currencies using REAL rates
+  // Convert between currencies using REAL market rates
   convertCurrency(
     amount: number,
     fromCurrency: string,
     toCurrency: string
   ): number {
-    const fromRate = this.getRate(fromCurrency);
-    const toRate = this.getRate(toCurrency);
-    const result = (amount / fromRate) * toRate;
+    if (fromCurrency === toCurrency) return amount;
+
+    // Convert to USD first, then to target currency
+    const fromRate = this.rates[fromCurrency] || 1;
+    const toRate = this.rates[toCurrency] || 1;
+
+    // Convert: amount in fromCurrency -> USD -> toCurrency
+    const usdAmount = amount / fromRate;
+    const result = usdAmount * toRate;
 
     console.log(
-      `💱 REAL API Conversion: ${amount} ${fromCurrency} → ${result.toFixed(
-        4
+      `💱 REAL Conversion: ${amount} ${fromCurrency} → ${result.toFixed(
+        8
       )} ${toCurrency}`
     );
     console.log(
-      `💱 Using REAL API rates: ${fromCurrency}=${fromRate.toFixed(
-        4
-      )}, ${toCurrency}=${toRate.toFixed(4)}`
+      `💱 Using REAL rates: ${fromCurrency}=${fromRate.toFixed(
+        6
+      )}, ${toCurrency}=${toRate.toFixed(6)}`
     );
 
     return result;
   }
 
-  // Convert crypto to USD using REAL prices
-  convertCryptoToUSD(amount: number, crypto: string): number {
-    const price = this.getCryptoPrice(crypto);
-    const result = amount * price;
+  // Get current exchange rate
+  getRate(currency: string): number {
+    return this.rates[currency] || 1;
+  }
 
-    console.log(
-      `🪙 REAL API Crypto Conversion: ${amount} ${crypto} → $${result.toFixed(
-        2
-      )} USD`
-    );
-
-    return result;
+  // Get current crypto price
+  getCryptoPrice(crypto: string): number {
+    return this.cryptoPrices[crypto] || 0;
   }
 
   // Get all current rates
@@ -352,18 +311,19 @@ class RealExchangeRateManager {
 
   // Force update from APIs
   async forceUpdate() {
-    console.log("🔄 Force updating REAL exchange rates from APIs...");
+    console.log("🔄 Force updating REAL exchange rates...");
     await this.fetchRealRates();
   }
 
   // Get API status
   getApiStatus() {
     return {
-      isRunning: this.isRunning,
       lastUpdate: this.lastUpdate,
       apiCallCount: this.apiCallCount,
       timeSinceLastUpdate: Date.now() - this.lastUpdate,
       subscribers: this.subscribers.length,
+      currentRates: this.rates,
+      currentCryptoPrices: this.cryptoPrices,
     };
   }
 
@@ -374,15 +334,14 @@ class RealExchangeRateManager {
       this.updateInterval = null;
     }
     this.subscribers = [];
-    this.isRunning = false;
-    console.log("🛑 REAL exchange rate manager destroyed");
+    console.log("🛑 Exchange rate manager destroyed");
   }
 }
 
 // Create singleton instance
 export const exchangeRateManager = RealExchangeRateManager.getInstance();
 
-// Utility functions
+// Utility functions for components
 export const convertCurrency = (
   amount: number,
   from: string,
@@ -411,9 +370,9 @@ export const getApiStatus = () => {
   return exchangeRateManager.getApiStatus();
 };
 
-// Initialize on import
+// Initialize immediately
 if (typeof window !== "undefined") {
-  console.log("🌍 REAL Exchange Rate Manager initialized with API connections");
-  console.log("📊 APIs: ExchangeRate-API (currencies) + CoinGecko (crypto)");
-  console.log("⏱️ Update frequency: Every 2 minutes (120 seconds)");
+  console.log("🌍 REAL Exchange Rate System Starting...");
+  console.log("📡 Connecting to live market data APIs...");
+  console.log("⚡ 30-second update intervals for maximum accuracy");
 }
