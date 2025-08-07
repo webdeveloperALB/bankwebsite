@@ -34,7 +34,10 @@ class GeolocationService {
   private subscribers: Array<(data: LocationInfo) => void> = [];
 
   private constructor() {
-    this.initializeLocationTracking();
+    // Only initialize on client side
+    if (typeof window !== "undefined") {
+      this.initializeLocationTracking();
+    }
   }
 
   static getInstance(): GeolocationService {
@@ -50,10 +53,10 @@ class GeolocationService {
     // Get initial location
     await this.updateLocation();
 
-    // Update every 5 minutes
+    // Update every 10 minutes instead of 5
     this.updateInterval = setInterval(() => {
       this.updateLocation();
-    }, 5 * 60 * 1000);
+    }, 10 * 60 * 1000);
   }
 
   private async updateLocation() {
@@ -82,8 +85,10 @@ class GeolocationService {
         console.log("✅ Location updated:", this.locationData);
         this.notifySubscribers();
 
-        // Log admin location activity
-        await this.logLocationActivity();
+        // Log admin location activity (only on client side)
+        if (typeof window !== "undefined") {
+          await this.logLocationActivity();
+        }
       }
     } catch (error) {
       console.error("❌ Error updating location:", error);
@@ -213,16 +218,30 @@ class GeolocationService {
     try {
       if (!this.locationData) return;
 
+      // Only run on client side and check if localStorage exists
+      if (
+        typeof window === "undefined" ||
+        typeof localStorage === "undefined"
+      ) {
+        return;
+      }
+
       // Get current admin user
       const adminSession = localStorage.getItem("admin_session");
       if (!adminSession) return;
 
-      const { user } = JSON.parse(adminSession);
+      try {
+        const { user } = JSON.parse(adminSession);
 
-      await supabase.from("activity_logs").insert({
-        user_id: user.id,
-        activity: `Admin location: ${this.locationData.location} (IP: ${this.locationData.ip})`,
-      });
+        await supabase.from("activity_logs").insert({
+          user_id: user.id,
+          activity: `Admin location: ${this.locationData.location} (IP: ${this.locationData.ip})`,
+        });
+
+        console.log("✅ Admin location activity logged");
+      } catch (parseError) {
+        console.error("Error parsing admin session:", parseError);
+      }
     } catch (error) {
       console.error("Error logging location activity:", error);
     }
@@ -301,7 +320,7 @@ export const getLocationSummary = (): string => {
   return geolocationService.getLocationSummary();
 };
 
-// Initialize on import
+// Initialize on import (only on client side)
 if (typeof window !== "undefined") {
   console.log("🌍 Geolocation Service initialized for admin panel");
   console.log("📍 Real-time IP and location tracking active");

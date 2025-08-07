@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { getCurrentUser, signOut } from "@/lib/auth";
-import { setUserOnline, setUserOffline } from "@/lib/user-presence";
+import { logUserLogin, logUserLogout } from "@/lib/session-tracker";
 import { Button } from "@/components/ui/button";
 import {
   LayoutDashboard,
@@ -19,9 +19,9 @@ import {
   LogOut,
   Menu,
   X,
-  Banknote,
 } from "lucide-react";
 import { Database } from "@/lib/supabase";
+import Image from "next/image";
 
 type User = Database["public"]["Tables"]["users"]["Row"];
 
@@ -38,13 +38,6 @@ export default function DashboardLayout({
   const [loading, setLoading] = useState(true);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const router = useRouter();
-
-  const handleUserPresenceCleanup = useCallback(() => {
-    if (user) {
-      setUserOffline(user.id).catch(console.error);
-      console.log("🔴 User presence ended for:", user.name);
-    }
-  }, [user]);
 
   useEffect(() => {
     const loadUser = async () => {
@@ -66,9 +59,34 @@ export default function DashboardLayout({
 
         setUser(currentUser);
 
-        // Set user ONLINE immediately
-        console.log("🟢 Initializing presence for user:", currentUser.name);
-        await setUserOnline(currentUser.id);
+        // Log user login only once per session using sessionStorage
+        const sessionKey = `login_logged_${currentUser.id}`;
+        const alreadyLogged = sessionStorage.getItem(sessionKey);
+
+        if (!alreadyLogged) {
+          console.log(
+            "📝 Logging login for user:",
+            currentUser.name,
+            "ID:",
+            currentUser.id
+          );
+          try {
+            await logUserLogin(currentUser.id);
+            sessionStorage.setItem(sessionKey, "true");
+            console.log("✅ Login logged successfully for:", currentUser.name);
+          } catch (error) {
+            console.error(
+              "❌ Failed to log login for:",
+              currentUser.name,
+              error
+            );
+          }
+        } else {
+          console.log(
+            "🔄 Login already logged for this session:",
+            currentUser.name
+          );
+        }
       } catch (error) {
         console.error("❌ Error in loadUser:", error);
         router.push("/auth/login");
@@ -79,14 +97,19 @@ export default function DashboardLayout({
 
     loadUser();
 
-    // Cleanup function
-    return handleUserPresenceCleanup;
-  }, [router, handleUserPresenceCleanup]);
+    // Cleanup function for logout - only run on unmount
+    return () => {
+      if (user) {
+        logUserLogout(user.id).catch(console.error);
+        console.log("📝 User logout logged for:", user.name);
+      }
+    };
+  }, [router]); // Remove handleUserLogoutCleanup from dependencies
 
   const handleSignOut = async () => {
-    console.log("🔴 User signing out - stopping presence");
+    console.log("📝 User signing out - logging logout");
     if (user) {
-      await setUserOffline(user.id);
+      await logUserLogout(user.id);
     }
     await signOut();
     router.push("/auth/login");
@@ -163,12 +186,15 @@ export default function DashboardLayout({
           sidebarOpen ? "translate-x-0" : "-translate-x-full"
         }`}
       >
-        <div className="flex items-center justify-between h-16 px-6 border-b">
+        <div className="flex items-center justify-between h-24 px-6 border-b">
           <div className="flex items-center">
-            <Banknote className="h-8 w-8 text-blue-600" />
-            <span className="ml-2 text-xl font-bold text-gray-900">
-              SecureBank
-            </span>
+            <Image
+              src="/anchor3.png"
+              alt="Anchor Group Solutions"
+              width={200} // adjust width as needed
+              height={40} // adjust height as needed
+              className="ml-0"
+            />
           </div>
           <Button
             variant="ghost"

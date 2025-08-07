@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useAdminSession } from "@/hooks/use-admin-session";
 import AdminSessionWarning from "@/components/admin-session-warning";
+import AdminLocationHeader from "@/app/admin/admin-location-header";
 import { Button } from "@/components/ui/button";
 import {
   Users,
@@ -15,22 +16,12 @@ import {
   Shield,
   Banknote,
   LogOut,
-  MapPin,
-  Globe,
-  Wifi,
-  RefreshCw,
   Clock,
   AlertTriangle,
+  Globe,
 } from "lucide-react";
 import { signOut } from "@/lib/auth";
 import { useRouter } from "next/navigation";
-import Image from "next/image";
-import {
-  subscribeToLocationUpdates,
-  getCurrentLocation,
-  forceLocationUpdate,
-  LocationInfo,
-} from "@/lib/geolocation";
 import React from "react";
 
 interface AdminLayoutProps {
@@ -45,8 +36,6 @@ export default function AdminLayout({
   onTabChange,
 }: AdminLayoutProps) {
   const router = useRouter();
-  const [locationInfo, setLocationInfo] = useState<LocationInfo | null>(null);
-  const [locationLoading, setLocationLoading] = useState(true);
 
   // Admin session management
   const { isExpired, timeRemaining, showWarning, forceLogout } =
@@ -63,23 +52,6 @@ export default function AdminLayout({
       handleSignOut();
     }
   }, [isExpired, handleSignOut]);
-
-  useEffect(() => {
-    // Get initial location
-    const currentLocation = getCurrentLocation();
-    if (currentLocation) {
-      setLocationInfo(currentLocation);
-      setLocationLoading(false);
-    }
-
-    // Subscribe to location updates
-    const unsubscribe = subscribeToLocationUpdates((data) => {
-      setLocationInfo(data);
-      setLocationLoading(false);
-    });
-
-    return unsubscribe;
-  }, []);
 
   // Format time remaining for display
   const formatTimeRemaining = (milliseconds: number): string => {
@@ -112,15 +84,6 @@ export default function AdminLayout({
         icon: Clock,
         pulse: "",
       };
-    }
-  };
-
-  const handleRefreshLocation = async () => {
-    setLocationLoading(true);
-    try {
-      await forceLocationUpdate();
-    } catch (error) {
-      console.error("Error refreshing location:", error);
     }
   };
 
@@ -175,95 +138,16 @@ export default function AdminLayout({
                 <div className="text-xs font-medium">Session</div>
               </div>
 
-              <div className="hidden lg:flex items-center space-x-4 px-4 py-2 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border border-blue-200">
-                {locationLoading ? (
-                  <div className="flex items-center space-x-2">
-                    <div className="animate-spin">
-                      <Wifi className="h-4 w-4 text-blue-600" />
-                    </div>
-                    <span className="text-sm text-blue-700 font-medium">
-                      Detecting location...
-                    </span>
-                  </div>
-                ) : locationInfo ? (
-                  <>
-                    <div className="flex items-center space-x-2">
-                      <Image
-                        src={locationInfo.flag}
-                        alt="Country flag"
-                        width={24}
-                        height={16}
-                        className="w-6 h-4 object-cover rounded-sm border border-gray-200"
-                        onError={(e) => {
-                          (e.target as HTMLImageElement).style.display = "none";
-                        }}
-                      />
-                      <Globe className="h-4 w-4 text-blue-600" />
-                      <div className="text-sm">
-                        <div className="font-semibold text-blue-900">
-                          {locationInfo.city}, {locationInfo.country}
-                        </div>
-                        <div className="text-blue-600 text-xs">
-                          IP: {locationInfo.ip}
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="h-8 w-px bg-blue-200"></div>
-
-                    <div className="flex items-center space-x-2">
-                      <MapPin className="h-4 w-4 text-blue-600" />
-                      <div className="text-xs text-blue-700">
-                        <div className="font-medium">
-                          {locationInfo.timezone}
-                        </div>
-                        <div className="text-blue-500">
-                          {locationInfo.coordinates}
-                        </div>
-                      </div>
-                    </div>
-
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={handleRefreshLocation}
-                      className="h-8 w-8 p-0 hover:bg-blue-100"
-                      title="Refresh location"
-                    >
-                      <RefreshCw
-                        className={`h-3 w-3 text-blue-600 ${
-                          locationLoading ? "animate-spin" : ""
-                        }`}
-                      />
-                    </Button>
-                  </>
-                ) : (
-                  <div className="flex items-center space-x-2">
-                    <Globe className="h-4 w-4 text-red-500" />
-                    <span className="text-sm text-red-600 font-medium">
-                      Location unavailable
-                    </span>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={handleRefreshLocation}
-                      className="h-6 w-6 p-0 hover:bg-red-100"
-                    >
-                      <RefreshCw className="h-3 w-3 text-red-500" />
-                    </Button>
-                  </div>
-                )}
+              {/* Admin Location Display */}
+              <div className="hidden lg:block">
+                <AdminLocationHeader />
               </div>
 
               {/* Mobile location summary */}
               <div className="lg:hidden flex items-center space-x-2 px-3 py-1 bg-blue-50 rounded-lg">
                 <Globe className="h-4 w-4 text-blue-600" />
                 <span className="text-sm text-blue-700 font-medium">
-                  {locationLoading
-                    ? "Locating..."
-                    : locationInfo
-                    ? locationInfo.ip
-                    : "No location"}
+                  Admin Location
                 </span>
               </div>
 

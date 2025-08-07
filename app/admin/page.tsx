@@ -9,8 +9,6 @@ import MessagesTab from "./components/messages-tab";
 import TaxesTab from "./components/taxes-tab";
 import BalancesTab from "./components/balances-tab";
 import { Database } from "@/lib/supabase";
-
-// Import existing components (you'll need to create these)
 import KYCTab from "./components/kyc-tab";
 import CryptoTab from "./components/crypto-tab";
 import TransactionsTab from "./components/transactions-tab";

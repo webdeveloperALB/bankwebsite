@@ -1,9 +1,8 @@
 "use client";
 
-import React from "react";
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
-import { getAllUsersWithPresence } from "@/lib/user-presence";
+import { getUserHistory } from "@/lib/session-tracker";
 import {
   Card,
   CardContent,
@@ -19,85 +18,94 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 import {
   Users,
   UserCheck,
-  UserX,
-  Clock,
   Globe,
   MapPin,
-  Wifi,
-  WifiOff,
-  Eye,
   History,
   RefreshCw,
+  Calendar,
 } from "lucide-react";
 import Image from "next/image";
-import { Database } from "@/lib/supabase";
 
-type User = Database["public"]["Tables"]["users"]["Row"];
+interface UserWithHistory {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+  kyc_status: string;
+  created_at: string;
+  sessionCount: number;
+  latestLocation: {
+    ip: string;
+    country: string;
+    region: string;
+    city: string;
+    timezone: string;
+    isp: string;
+    lat: number;
+    lon: number;
+    flag: string;
+    lastLogin: string;
+  } | null;
+}
 
 export default function UsersTab() {
-  const [usersWithPresence, setUsersWithPresence] = useState<any[]>([]);
+  const [users, setUsers] = useState<UserWithHistory[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [selectedUser, setSelectedUser] = useState<any>(null);
+  const [selectedUser, setSelectedUser] = useState<UserWithHistory | null>(
+    null
+  );
   const [locationHistory, setLocationHistory] = useState<any[]>([]);
   const [locationDialogOpen, setLocationDialogOpen] = useState(false);
 
   useEffect(() => {
-    const loadUsersWithPresence = async () => {
+    const loadUsers = async () => {
       try {
-        console.log("👥 Loading users with REAL presence data...");
-        const data = await getAllUsersWithPresence();
-        console.log("👥 Users with REAL presence loaded:", data.length);
-        setUsersWithPresence(data);
+        console.log("👥 Loading users with session history...");
+        const data = await getUserHistory();
+        console.log("👥 Users loaded:", data.length);
+
+        // Debug: log the first user's data
+        if (data.length > 0) {
+          console.log("🔍 First user data:", {
+            name: data[0].name,
+            sessionCount: data[0].sessionCount,
+            latestLocation: data[0].latestLocation,
+          });
+        }
+
+        setUsers(data);
       } catch (error) {
-        console.error("❌ Error loading users with presence:", error);
-        setUsersWithPresence([]);
+        console.error("❌ Error loading users:", error);
+        setUsers([]);
       } finally {
         setLoading(false);
       }
     };
 
-    loadUsersWithPresence();
+    loadUsers();
 
-    // Set up real-time subscriptions for user changes
+    // Set up real-time subscriptions for location changes
     const usersChannel = supabase
-      .channel("admin_users_presence")
+      .channel("admin_users_history")
       .on(
         "postgres_changes",
-        { event: "*", schema: "public", table: "users" },
-        () => {
-          console.log("🔄 Users table changed - reloading presence");
-          loadUsersWithPresence();
-        }
+        { event: "*", schema: "public", table: "user_locations" },
+        loadUsers
       )
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "user_sessions" },
-        () => {
-          console.log("🔄 User sessions changed - reloading presence");
-          loadUsersWithPresence();
-        }
-      )
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "activity_logs" },
-        () => {
-          console.log("🔄 Activity logs changed - reloading presence");
-          loadUsersWithPresence();
-        }
+        loadUsers
       )
       .subscribe();
 
-    // Auto-refresh every 15 seconds for real-time accuracy
-    const refreshInterval = setInterval(() => {
-      console.log("🔄 Auto-refreshing presence data...");
-      loadUsersWithPresence();
-    }, 15000);
+    // Auto-refresh every 2 minutes instead of 30 seconds
+    const refreshInterval = setInterval(loadUsers, 2 * 60 * 1000);
 
     return () => {
       supabase.removeChannel(usersChannel);
@@ -108,17 +116,16 @@ export default function UsersTab() {
   const handleRefresh = async () => {
     setRefreshing(true);
     try {
-      const data = await getAllUsersWithPresence();
-      setUsersWithPresence(data || []);
+      const data = await getUserHistory();
+      setUsers(data || []);
     } catch (error) {
       console.error("❌ Error refreshing users:", error);
-      setUsersWithPresence([]);
     } finally {
       setRefreshing(false);
     }
   };
 
-  const viewLocationHistory = async (user: any) => {
+  const viewLocationHistory = async (user: UserWithHistory) => {
     setSelectedUser(user);
     try {
       const { data: history } = await supabase
@@ -137,109 +144,25 @@ export default function UsersTab() {
     }
   };
 
-  const updateUserRole = async (userId: string, newRole: string) => {
-    const { error } = await supabase
-      .from("users")
-      .update({ role: newRole })
-      .eq("id", userId);
+  const getLastLoginText = (user: UserWithHistory) => {
+    if (!user.latestLocation?.lastLogin) return "Never logged in";
 
-    if (error) {
-      console.error("Error updating user role:", error);
-    }
-  };
+    const lastLogin = new Date(user.latestLocation.lastLogin);
+    const diffSeconds = Math.floor((Date.now() - lastLogin.getTime()) / 1000);
 
-  const getOnlineStatus = (user: any) => {
-    const lastSeen = new Date(user.lastSeen);
-    const diffSeconds = Math.floor((Date.now() - lastSeen.getTime()) / 1000);
-
-    console.log(
-      `👤 ${user.name}: isOnline=${user.isOnline}, diffSeconds=${diffSeconds}`
-    );
-
-    // Online if marked as online and activity within last 30 seconds
-    if (user.isOnline && diffSeconds < 30) {
-      return {
-        status: "online",
-        color: "bg-green-100 text-green-800",
-        icon: Wifi,
-      };
-    }
-
-    // Recently active if within 2 minutes
-    if (diffSeconds < 120) {
-      return {
-        status: "recently",
-        color: "bg-yellow-100 text-yellow-800",
-        icon: Clock,
-      };
-    } else {
-      return {
-        status: "offline",
-        color: "bg-red-100 text-red-800",
-        icon: WifiOff,
-      };
-    }
-  };
-
-  const getLastSeenText = (user: any) => {
-    const lastSeen = new Date(user.lastSeen);
-    const diffSeconds = Math.floor((Date.now() - lastSeen.getTime()) / 1000);
-
-    // Show "Online now" if marked as online and activity within 30 seconds
-    if (user.isOnline && diffSeconds < 30) {
-      return "Online now";
-    }
-
+    if (diffSeconds < 60) return `${diffSeconds}s ago`;
     const diffMinutes = Math.floor(diffSeconds / 60);
-
-    if (diffSeconds < 60) return `${diffSeconds} seconds ago`;
-    if (diffMinutes < 60) return `${diffMinutes} minutes ago`;
-
+    if (diffMinutes < 60) return `${diffMinutes}m ago`;
     const diffHours = Math.floor(diffMinutes / 60);
-    if (diffHours < 24) return `${diffHours} hours ago`;
-
+    if (diffHours < 24) return `${diffHours}h ago`;
     const diffDays = Math.floor(diffHours / 24);
-    return `${diffDays} days ago`;
+    return `${diffDays}d ago`;
   };
-
-  const getRoleColor = (role: string) => {
-    switch (role) {
-      case "admin":
-        return "bg-red-100 text-red-800";
-      case "client":
-        return "bg-blue-100 text-blue-800";
-      default:
-        return "bg-gray-100 text-gray-800";
-    }
-  };
-
-  const getKycColor = (status: string) => {
-    switch (status) {
-      case "approved":
-        return "bg-green-100 text-green-800";
-      case "pending":
-        return "bg-yellow-100 text-yellow-800";
-      case "rejected":
-        return "bg-red-100 text-red-800";
-      case "submitted":
-        return "bg-blue-100 text-blue-800";
-      default:
-        return "bg-gray-100 text-gray-800";
-    }
-  };
-
-  const onlineUsers = usersWithPresence.filter((u) => u.isOnline);
-  const offlineUsers = usersWithPresence.filter((u) => !u.isOnline);
 
   const stats = {
-    total: usersWithPresence.length,
-    online: onlineUsers.length,
-    offline: offlineUsers.length,
-    approved: usersWithPresence.filter((u) => u.kyc_status === "approved")
-      .length,
-    pending: usersWithPresence.filter((u) => u.kyc_status === "pending").length,
-    rejected: usersWithPresence.filter((u) => u.kyc_status === "rejected")
-      .length,
+    total: users.length,
+    approved: users.filter((u) => u.kyc_status === "approved").length,
+    withSessions: users.filter((u) => u.sessionCount > 0).length,
   };
 
   return (
@@ -247,10 +170,11 @@ export default function UsersTab() {
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">
-            User Management & Presence
+            User Session History
           </h1>
           <p className="text-gray-600">
-            Real-time user activity, location tracking, and session management
+            Track user login/logout history with IP addresses and geolocation
+            data
           </p>
         </div>
 
@@ -262,8 +186,8 @@ export default function UsersTab() {
         </Button>
       </div>
 
-      {/* Enhanced Stats with Online/Offline */}
-      <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
+      {/* Stats */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Users</CardTitle>
@@ -274,35 +198,9 @@ export default function UsersTab() {
           </CardContent>
         </Card>
 
-        <Card className="border-l-4 border-l-green-500">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Online Now</CardTitle>
-            <Wifi className="h-4 w-4 text-green-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-green-600">
-              {stats.online}
-            </div>
-            <p className="text-xs text-green-600 mt-1">Active sessions</p>
-          </CardContent>
-        </Card>
-
-        <Card className="border-l-4 border-l-red-500">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Offline</CardTitle>
-            <WifiOff className="h-4 w-4 text-red-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-red-600">
-              {stats.offline}
-            </div>
-            <p className="text-xs text-red-600 mt-1">Not active</p>
-          </CardContent>
-        </Card>
-
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Approved</CardTitle>
+            <CardTitle className="text-sm font-medium">KYC Approved</CardTitle>
             <UserCheck className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -314,40 +212,25 @@ export default function UsersTab() {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Pending</CardTitle>
-            <Clock className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium">
+              With Login History
+            </CardTitle>
+            <Calendar className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-yellow-600">
-              {stats.pending}
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Rejected</CardTitle>
-            <UserX className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-red-600">
-              {stats.rejected}
+            <div className="text-2xl font-bold text-blue-600">
+              {stats.withSessions}
             </div>
           </CardContent>
         </Card>
       </div>
 
-      {/* Enhanced Users List with Presence */}
+      {/* Users List */}
       <Card>
         <CardHeader>
-          <CardTitle>Users with Real-Time Presence</CardTitle>
+          <CardTitle>User Login/Logout History</CardTitle>
           <CardDescription>
-            Live user activity, location tracking, and session management
-            {!loading && (
-              <span className="ml-2 text-blue-600">
-                ({stats.online} online, {stats.offline} offline)
-              </span>
-            )}
+            Complete session tracking with IP addresses and geolocation data
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -363,157 +246,111 @@ export default function UsersTab() {
                         <div className="h-3 bg-gray-200 rounded w-32"></div>
                       </div>
                     </div>
-                    <div className="space-y-2">
-                      <div className="h-6 bg-gray-200 rounded w-20"></div>
-                      <div className="h-4 bg-gray-200 rounded w-24"></div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : users.length > 0 ? (
+            <div className="space-y-4">
+              {users.map((user) => (
+                <div
+                  key={user.id}
+                  className="p-4 border rounded-lg hover:bg-gray-50 transition-colors"
+                >
+                  <div className="flex justify-between items-center">
+                    <div className="flex items-center space-x-4">
+                      <div className="h-12 w-12 bg-blue-100 rounded-full flex items-center justify-center">
+                        <span className="text-blue-600 font-semibold text-lg">
+                          {user.name.charAt(0).toUpperCase()}
+                        </span>
+                      </div>
+
+                      <div className="space-y-1">
+                        <div className="flex items-center space-x-3">
+                          <h3 className="font-semibold text-gray-900">
+                            {user.name}
+                          </h3>
+                          <Badge
+                            variant={
+                              user.kyc_status === "approved"
+                                ? "default"
+                                : "secondary"
+                            }
+                          >
+                            {user.kyc_status}
+                          </Badge>
+                        </div>
+
+                        <p className="text-sm text-gray-600">{user.email}</p>
+
+                        <div className="flex items-center space-x-4 text-xs text-gray-500">
+                          <span>Last login: {getLastLoginText(user)}</span>
+                          <span>•</span>
+                          <span>{user.sessionCount} total sessions</span>
+                          <span>•</span>
+                          <span>
+                            Joined{" "}
+                            {new Date(user.created_at).toLocaleDateString()}
+                          </span>
+                        </div>
+
+                        {/* Latest Location Display */}
+                        {user.latestLocation ? (
+                          <div className="flex items-center space-x-2 mt-2 p-3 bg-white rounded-lg border">
+                            <Image
+                              src={
+                                user.latestLocation.flag || "/placeholder.svg"
+                              }
+                              alt="Country flag"
+                              width={20}
+                              height={14}
+                              className="w-5 h-3.5 object-cover rounded-sm border"
+                              onError={(e) => {
+                                (e.target as HTMLImageElement).style.display =
+                                  "none";
+                              }}
+                            />
+                            <Globe className="h-4 w-4 text-blue-600" />
+                            <span className="text-sm font-medium text-gray-700">
+                              {user.latestLocation.city},{" "}
+                              {user.latestLocation.country}
+                            </span>
+                            <Badge
+                              variant="outline"
+                              className="text-xs font-mono"
+                            >
+                              {user.latestLocation.ip}
+                            </Badge>
+                            <MapPin className="h-3 w-3 text-gray-400" />
+                            <span className="text-xs text-gray-500">
+                              {user.latestLocation.lat?.toFixed(4)},{" "}
+                              {user.latestLocation.lon?.toFixed(4)}
+                            </span>
+                          </div>
+                        ) : (
+                          <div className="p-2 bg-gray-100 rounded text-xs text-gray-500">
+                            No login history available
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="flex items-center space-x-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => viewLocationHistory(user)}
+                      >
+                        <History className="h-4 w-4 mr-1" />
+                        View History
+                      </Button>
                     </div>
                   </div>
                 </div>
               ))}
             </div>
-          ) : usersWithPresence.length > 0 ? (
-            <div className="space-y-4">
-              {usersWithPresence.map((user) => {
-                const onlineStatus = getOnlineStatus(user);
-                const location = user.location;
-
-                return (
-                  <div
-                    key={user.id}
-                    className={`p-4 border rounded-lg hover:bg-gray-50 transition-colors ${
-                      onlineStatus.status === "online"
-                        ? "border-l-4 border-l-green-500 bg-green-50/30"
-                        : onlineStatus.status === "recently"
-                        ? "border-l-4 border-l-yellow-500 bg-yellow-50/30"
-                        : "border-l-4 border-l-gray-300"
-                    }`}
-                  >
-                    <div className="flex justify-between items-center">
-                      <div className="flex items-center space-x-4">
-                        <div className="relative">
-                          <div className="h-12 w-12 bg-blue-100 rounded-full flex items-center justify-center">
-                            <span className="text-blue-600 font-semibold text-lg">
-                              {user.name.charAt(0).toUpperCase()}
-                            </span>
-                          </div>
-                          {/* Online indicator */}
-                          <div
-                            className={`absolute -bottom-1 -right-1 h-4 w-4 rounded-full border-2 border-white ${
-                              onlineStatus.status === "online"
-                                ? "bg-green-500"
-                                : onlineStatus.status === "recently"
-                                ? "bg-yellow-500"
-                                : "bg-gray-400"
-                            }`}
-                          ></div>
-                        </div>
-
-                        <div className="space-y-1">
-                          <div className="flex items-center space-x-3">
-                            <h3 className="font-semibold text-gray-900">
-                              {user.name}
-                            </h3>
-                            <Badge
-                              className={`${onlineStatus.color} flex items-center space-x-1`}
-                            >
-                              {React.createElement(onlineStatus.icon, {
-                                className: "h-3 w-3",
-                              })}
-                              <span className="capitalize">
-                                {onlineStatus.status}
-                              </span>
-                            </Badge>
-                          </div>
-
-                          <p className="text-sm text-gray-600">{user.email}</p>
-
-                          <div className="flex items-center space-x-4 text-xs text-gray-500">
-                            <span>
-                              Joined{" "}
-                              {new Date(user.created_at).toLocaleDateString()}
-                            </span>
-                            <span>•</span>
-                            <span>{getLastSeenText(user)}</span>
-                            {user.sessionCount > 0 && (
-                              <>
-                                <span>•</span>
-                                <span>{user.sessionCount} sessions</span>
-                              </>
-                            )}
-                          </div>
-
-                          {/* Current Location (if available) */}
-                          {location && (
-                            <div className="flex items-center space-x-2 mt-2 p-2 bg-white rounded-lg border">
-                              <Image
-                                src={location.flag}
-                                alt="Country flag"
-                                width={20}
-                                height={14}
-                                className="w-5 h-3.5 object-cover rounded-sm border border-gray-200"
-                                onError={(e) => {
-                                  (e.target as HTMLImageElement).style.display =
-                                    "none";
-                                }}
-                              />
-                              <Globe className="h-3 w-3 text-blue-600" />
-                              <span className="text-xs font-medium text-gray-700">
-                                {location.city}, {location.country}
-                              </span>
-                              <span className="text-xs text-gray-500">
-                                ({location.ip})
-                              </span>
-                              <MapPin className="h-3 w-3 text-gray-400" />
-                              <span className="text-xs text-gray-500">
-                                {location.lat?.toFixed(4)},{" "}
-                                {location.lon?.toFixed(4)}
-                              </span>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-
-                      <div className="flex items-center space-x-2">
-                        <Badge className={getRoleColor(user.role)}>
-                          {user.role}
-                        </Badge>
-                        <Badge className={getKycColor(user.kyc_status)}>
-                          {user.kyc_status}
-                        </Badge>
-
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => viewLocationHistory(user)}
-                        >
-                          <History className="h-4 w-4 mr-1" />
-                          History
-                        </Button>
-
-                        {user.role !== "admin" && (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() =>
-                              updateUserRole(
-                                user.id,
-                                user.role === "client" ? "admin" : "client"
-                              )
-                            }
-                          >
-                            {user.role === "client"
-                              ? "Make Admin"
-                              : "Make Client"}
-                          </Button>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
           ) : (
-            <div className="text-center py-8">
+            <div className="text-center py-12">
               <Users className="h-12 w-12 text-gray-400 mx-auto mb-4" />
               <h3 className="text-lg font-medium text-gray-900 mb-2">
                 No users found
@@ -530,9 +367,10 @@ export default function UsersTab() {
       <Dialog open={locationDialogOpen} onOpenChange={setLocationDialogOpen}>
         <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Location History - {selectedUser?.name}</DialogTitle>
+            <DialogTitle>Login History - {selectedUser?.name}</DialogTitle>
             <DialogDescription>
-              Complete location and session history for security monitoring
+              Complete login/logout history with IP addresses and geolocation
+              data
             </DialogDescription>
           </DialogHeader>
 
@@ -548,7 +386,7 @@ export default function UsersTab() {
                       <div className="flex items-center space-x-4">
                         <div className="flex items-center space-x-2">
                           <Image
-                            src={location.flag_url}
+                            src={location.flag_url || "/placeholder.svg"}
                             alt="Country flag"
                             width={24}
                             height={16}
@@ -601,10 +439,10 @@ export default function UsersTab() {
               <div className="text-center py-8">
                 <MapPin className="h-12 w-12 text-gray-400 mx-auto mb-4" />
                 <h3 className="text-lg font-medium text-gray-900 mb-2">
-                  No location history
+                  No login history
                 </h3>
                 <p className="text-gray-500">
-                  Location data will appear when user logs in
+                  Login data will appear when user logs in
                 </p>
               </div>
             )}

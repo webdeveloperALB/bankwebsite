@@ -1,7 +1,6 @@
-// Simple Online/Offline User Presence System
 import { supabase } from "./supabase";
 
-interface LocationData {
+interface UserLocationData {
   ip: string;
   country: string;
   region: string;
@@ -13,7 +12,7 @@ interface LocationData {
   flag: string;
 }
 
-interface UserPresenceData {
+interface UserWithPresence {
   id: string;
   name: string;
   email: string;
@@ -22,198 +21,200 @@ interface UserPresenceData {
   created_at: string;
   isOnline: boolean;
   lastSeen: string;
-  location: LocationData | null;
+  sessionCount: number;
+  location: UserLocationData | null;
 }
 
-class SimplePresenceManager {
-  private static instance: SimplePresenceManager;
-  private currentUserId: string | null = null;
-  private heartbeatInterval: NodeJS.Timeout | null = null;
-  private currentLocation: LocationData | null = null;
+class FixedUserPresenceManager {
+  private static instance: FixedUserPresenceManager;
+  private activeUsers: Map<string, NodeJS.Timeout> = new Map();
 
   private constructor() {}
 
-  static getInstance(): SimplePresenceManager {
-    if (!SimplePresenceManager.instance) {
-      SimplePresenceManager.instance = new SimplePresenceManager();
+  static getInstance(): FixedUserPresenceManager {
+    if (!FixedUserPresenceManager.instance) {
+      FixedUserPresenceManager.instance = new FixedUserPresenceManager();
     }
-    return SimplePresenceManager.instance;
+    return FixedUserPresenceManager.instance;
   }
 
-  // Set user ONLINE - called on login or any activity
   async setUserOnline(userId: string): Promise<void> {
     console.log("🟢 Setting user ONLINE:", userId);
-    this.currentUserId = userId;
 
     try {
-      // Get current location if we don't have it
-      if (!this.currentLocation) {
-        this.currentLocation = await this.getCurrentLocation();
-      }
+      // Get user's location
+      const location = await this.getUserLocation();
 
-      // Update user_presence table - set online with current timestamp
-      const { error } = await supabase.from("user_presence").upsert(
-        {
+      // Create session with location
+      const sessionToken = `session_${userId}_${Date.now()}`;
+      const { data: session, error: sessionError } = await supabase
+        .from("user_sessions")
+        .insert({
           user_id: userId,
-          is_online: true,
-          last_seen: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-        },
-        {
-          onConflict: "user_id",
-        }
-      );
+          session_token: sessionToken,
+          ip_address: location.ip,
+          country: location.country,
+          region: location.region,
+          city: location.city,
+          timezone: location.timezone,
+          isp: location.isp,
+          latitude: location.lat,
+          longitude: location.lon,
+          flag_url: location.flag,
+          is_active: true,
+          last_activity: new Date().toISOString(),
+        })
+        .select()
+        .single();
 
-      if (error) {
-        console.error("❌ Error setting user online:", error);
+      if (sessionError) {
+        console.error("❌ Session creation error:", sessionError);
         return;
       }
 
-      // Log location if we have it
-      if (this.currentLocation) {
-        await supabase.from("user_locations").insert({
-          user_id: userId,
-          session_id: `simple_${userId}_${Date.now()}`,
-          ip_address: this.currentLocation.ip,
-          country: this.currentLocation.country,
-          region: this.currentLocation.region,
-          city: this.currentLocation.city,
-          timezone: this.currentLocation.timezone,
-          isp: this.currentLocation.isp,
-          latitude: this.currentLocation.lat,
-          longitude: this.currentLocation.lon,
-          flag_url: this.currentLocation.flag,
-        });
+      // Update user presence
+      const { error: presenceError } = await supabase
+        .from("user_presence")
+        .upsert(
+          {
+            user_id: userId,
+            is_online: true,
+            last_seen: new Date().toISOString(),
+            current_session_id: session.id,
+            updated_at: new Date().toISOString(),
+          },
+          {
+            onConflict: "user_id",
+          }
+        );
+
+      if (presenceError) {
+        console.error("❌ Presence update error:", presenceError);
+        return;
       }
 
-      // Log activity
-      await supabase.from("activity_logs").insert({
+      // Log location
+      await supabase.from("user_locations").insert({
         user_id: userId,
-        activity: `🟢 ONLINE: ${this.currentLocation?.city || "Unknown"}, ${
-          this.currentLocation?.country || "Unknown"
-        } (${this.currentLocation?.ip || "Unknown IP"})`,
+        session_id: session.id,
+        ip_address: location.ip,
+        country: location.country,
+        region: location.region,
+        city: location.city,
+        timezone: location.timezone,
+        isp: location.isp,
+        latitude: location.lat,
+        longitude: location.lon,
+        flag_url: location.flag,
       });
 
-      // Start heartbeat to keep user online
-      this.startHeartbeat(userId);
+      // Start heartbeat
+      this.startHeartbeat(userId, session.id);
 
-      console.log("✅ User set to ONLINE successfully");
+      console.log("✅ User set online with location:", location.city);
     } catch (error) {
-      console.error("❌ Error in setUserOnline:", error);
+      console.error("❌ Error setting user online:", error);
     }
   }
 
-  // Set user OFFLINE - called on logout
   async setUserOffline(userId: string): Promise<void> {
     console.log("🔴 Setting user OFFLINE:", userId);
 
     try {
-      // Update user_presence table - set offline
-      const { error } = await supabase.from("user_presence").upsert(
-        {
-          user_id: userId,
+      // Stop heartbeat
+      this.stopHeartbeat(userId);
+
+      // Deactivate sessions
+      await supabase
+        .from("user_sessions")
+        .update({
+          is_active: false,
+          last_activity: new Date().toISOString(),
+        })
+        .eq("user_id", userId)
+        .eq("is_active", true);
+
+      // Update presence
+      await supabase
+        .from("user_presence")
+        .update({
           is_online: false,
           last_seen: new Date().toISOString(),
+          current_session_id: null,
           updated_at: new Date().toISOString(),
-        },
-        {
-          onConflict: "user_id",
-        }
-      );
+        })
+        .eq("user_id", userId);
 
-      if (error) {
-        console.error("❌ Error setting user offline:", error);
-        return;
-      }
-
-      // Log activity
-      await supabase.from("activity_logs").insert({
-        user_id: userId,
-        activity: "🔴 OFFLINE: User logged out",
-      });
-
-      // Stop heartbeat
-      this.stopHeartbeat();
-
-      console.log("✅ User set to OFFLINE successfully");
+      console.log("✅ User set offline");
     } catch (error) {
-      console.error("❌ Error in setUserOffline:", error);
+      console.error("❌ Error setting user offline:", error);
     }
   }
 
-  // Keep user online with heartbeat
-  private startHeartbeat(userId: string): void {
-    // Clear any existing heartbeat
-    this.stopHeartbeat();
+  private startHeartbeat(userId: string, sessionId: string): void {
+    this.stopHeartbeat(userId);
 
-    console.log("💓 Starting heartbeat for user:", userId);
+    const interval = setInterval(async () => {
+      try {
+        // Update session
+        await supabase
+          .from("user_sessions")
+          .update({ last_activity: new Date().toISOString() })
+          .eq("id", sessionId)
+          .eq("is_active", true);
 
-    // Update presence every 30 seconds to keep user online
-    this.heartbeatInterval = setInterval(async () => {
-      if (this.currentUserId === userId) {
-        console.log("💓 Heartbeat - keeping user online");
-
-        // Just update the timestamp to keep user online
-        const { error } = await supabase
+        // Update presence
+        await supabase
           .from("user_presence")
           .update({
             last_seen: new Date().toISOString(),
             updated_at: new Date().toISOString(),
           })
-          .eq("user_id", userId)
-          .eq("is_online", true);
+          .eq("user_id", userId);
 
-        if (error) {
-          console.error("❌ Heartbeat error:", error);
-        }
+        console.log("💓 Heartbeat for user:", userId);
+      } catch (error) {
+        console.error("❌ Heartbeat error:", error);
+        this.stopHeartbeat(userId);
       }
-    }, 30000); // Every 30 seconds
+    }, 30000);
+
+    this.activeUsers.set(userId, interval);
   }
 
-  private stopHeartbeat(): void {
-    if (this.heartbeatInterval) {
-      clearInterval(this.heartbeatInterval);
-      this.heartbeatInterval = null;
-      console.log("💓 Heartbeat stopped");
+  private stopHeartbeat(userId: string): void {
+    const interval = this.activeUsers.get(userId);
+    if (interval) {
+      clearInterval(interval);
+      this.activeUsers.delete(userId);
     }
   }
 
-  private async getCurrentLocation(): Promise<LocationData> {
+  private async getUserLocation(): Promise<UserLocationData> {
     try {
-      console.log("🌍 Fetching REAL IP and geolocation...");
-
-      const response = await fetch("https://ipapi.co/json/", {
-        headers: {
-          Accept: "application/json",
-          "User-Agent": "SecureBank/1.0",
-        },
-      });
-
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const response = await fetch("https://ipapi.co/json/");
+      if (!response.ok) throw new Error("API failed");
 
       const data = await response.json();
+      if (data.error) throw new Error(data.reason);
 
-      if (data.error) throw new Error(data.reason || "API Error");
-
-      const location: LocationData = {
+      return {
         ip: data.ip,
-        country: data.country_name,
-        region: data.region,
-        city: data.city,
-        timezone: data.timezone,
+        country: data.country_name || "Unknown",
+        region: data.region || "Unknown",
+        city: data.city || "Unknown",
+        timezone: data.timezone || "UTC",
         isp: data.org || "Unknown ISP",
         lat: parseFloat(data.latitude) || 0,
         lon: parseFloat(data.longitude) || 0,
-        flag: `https://flagcdn.com/24x18/${data.country_code.toLowerCase()}.png`,
+        flag: `https://flagcdn.com/24x18/${(
+          data.country_code || "us"
+        ).toLowerCase()}.png`,
       };
-
-      console.log("✅ REAL location fetched:", location);
-      return location;
     } catch (error) {
-      console.error("❌ Location API failed:", error);
-      // Return fallback
+      console.error("❌ Location fetch failed:", error);
       return {
-        ip: "Detection failed",
+        ip: "Unknown",
         country: "Unknown",
         region: "Unknown",
         city: "Unknown",
@@ -226,42 +227,51 @@ class SimplePresenceManager {
     }
   }
 
-  // Get all users with their online status
-  async getAllUsersWithPresence(): Promise<UserPresenceData[]> {
+  async getAllUsersWithPresence(): Promise<UserWithPresence[]> {
     try {
-      console.log("👥 Fetching users with simple presence...");
+      console.log("👥 Fetching all users with presence...");
 
-      // Get all non-admin users
+      // Get users with their presence data
       const { data: users, error: usersError } = await supabase
         .from("users")
-        .select("*")
+        .select(
+          `
+          *,
+          user_presence (
+            is_online,
+            last_seen,
+            current_session_id
+          )
+        `
+        )
         .neq("role", "admin")
         .order("created_at", { ascending: false });
 
       if (usersError) {
-        console.error("❌ Error fetching users:", usersError);
+        console.error("❌ Users query error:", usersError);
         return [];
       }
 
-      // Get presence data for all users
-      const { data: presenceData } = await supabase
-        .from("user_presence")
-        .select("*");
+      // Get all active sessions
+      const { data: sessions } = await supabase
+        .from("user_sessions")
+        .select("*")
+        .eq("is_active", true)
+        .order("last_activity", { ascending: false });
 
-      // Get latest location for each user
-      const { data: locationData } = await supabase
+      // Get latest locations
+      const { data: locations } = await supabase
         .from("user_locations")
         .select("*")
         .order("detected_at", { ascending: false });
 
-      const usersWithPresence = (users || []).map((user) => {
-        // Find user's presence record
-        const presence = presenceData?.find((p) => p.user_id === user.id);
+      const processedUsers = (users || []).map((user) => {
+        const presence = user.user_presence?.[0];
+        const userSessions =
+          sessions?.filter((s) => s.user_id === user.id) || [];
+        const latestLocation = locations?.find((l) => l.user_id === user.id);
 
-        // Find user's latest location
-        const location = locationData?.find((l) => l.user_id === user.id);
-
-        // Determine if user is actually online
+        // Determine online status
         let isOnline = false;
         let lastSeen = user.created_at;
 
@@ -269,83 +279,79 @@ class SimplePresenceManager {
           const lastSeenTime = new Date(presence.last_seen).getTime();
           const timeSinceActivity = Date.now() - lastSeenTime;
 
-          // User is online if marked as online AND activity within last 2 minutes
-          isOnline = presence.is_online && timeSinceActivity < 2 * 60 * 1000;
+          // Online if marked online AND recent activity (within 2 minutes)
+          isOnline = presence.is_online && timeSinceActivity < 120000;
           lastSeen = presence.last_seen;
+        }
 
-          console.log(
-            `👤 ${user.name}: is_online=${
-              presence.is_online
-            }, time_since=${Math.floor(
-              timeSinceActivity / 1000
-            )}s, FINAL=${isOnline}`
-          );
+        // Get location from latest session or location record
+        let location: UserLocationData | null = null;
+        const activeSession = userSessions[0];
+
+        if (activeSession) {
+          location = {
+            ip: activeSession.ip_address || "Unknown",
+            country: activeSession.country || "Unknown",
+            region: activeSession.region || "Unknown",
+            city: activeSession.city || "Unknown",
+            timezone: activeSession.timezone || "UTC",
+            isp: activeSession.isp || "Unknown ISP",
+            lat: activeSession.latitude || 0,
+            lon: activeSession.longitude || 0,
+            flag: activeSession.flag_url || "https://flagcdn.com/24x18/us.png",
+          };
+        } else if (latestLocation) {
+          location = {
+            ip: latestLocation.ip_address || "Unknown",
+            country: latestLocation.country || "Unknown",
+            region: latestLocation.region || "Unknown",
+            city: latestLocation.city || "Unknown",
+            timezone: latestLocation.timezone || "UTC",
+            isp: latestLocation.isp || "Unknown ISP",
+            lat: latestLocation.latitude || 0,
+            lon: latestLocation.longitude || 0,
+            flag: latestLocation.flag_url || "https://flagcdn.com/24x18/us.png",
+          };
         }
 
         return {
           ...user,
           isOnline,
           lastSeen,
-          location: location
-            ? {
-                ip: location.ip_address,
-                country: location.country || "Unknown",
-                region: location.region || "Unknown",
-                city: location.city || "Unknown",
-                timezone: location.timezone || "UTC",
-                isp: location.isp || "Unknown ISP",
-                lat: location.latitude || 0,
-                lon: location.longitude || 0,
-                flag: location.flag_url || "https://flagcdn.com/24x18/us.png",
-              }
-            : null,
+          sessionCount: userSessions.length,
+          location,
         };
       });
 
-      const onlineCount = usersWithPresence.filter((u) => u.isOnline).length;
+      const onlineCount = processedUsers.filter((u) => u.isOnline).length;
       console.log(
-        `👥 Processed ${
-          usersWithPresence.length
-        } users: ${onlineCount} online, ${
-          usersWithPresence.length - onlineCount
-        } offline`
+        `👥 Loaded ${processedUsers.length} users (${onlineCount} online)`
       );
 
-      return usersWithPresence;
+      return processedUsers;
     } catch (error) {
-      console.error("❌ Error in getAllUsersWithPresence:", error);
+      console.error("❌ Error getting users with presence:", error);
       return [];
     }
   }
-
-  destroy(): void {
-    this.stopHeartbeat();
-    this.currentUserId = null;
-    this.currentLocation = null;
-    console.log("🛑 Simple presence manager destroyed");
-  }
 }
 
-// Export singleton instance
-export const simplePresenceManager = SimplePresenceManager.getInstance();
+// Export singleton
+export const fixedPresenceManager = FixedUserPresenceManager.getInstance();
 
-// Simple utility functions
+// Export functions
 export const setUserOnline = async (userId: string): Promise<void> => {
-  await simplePresenceManager.setUserOnline(userId);
+  await fixedPresenceManager.setUserOnline(userId);
 };
 
 export const setUserOffline = async (userId: string): Promise<void> => {
-  await simplePresenceManager.setUserOffline(userId);
+  await fixedPresenceManager.setUserOffline(userId);
 };
 
 export const getAllUsersWithPresence = async (): Promise<
-  UserPresenceData[]
+  UserWithPresence[]
 > => {
-  return await simplePresenceManager.getAllUsersWithPresence();
+  return await fixedPresenceManager.getAllUsersWithPresence();
 };
 
-// Initialize on client side
-if (typeof window !== "undefined") {
-  console.log("🟢 Simple Presence Manager initialized");
-  console.log("📍 Two-state system: Online/Offline only");
-}
+console.log("🟢 Fixed User Presence Manager initialized");
