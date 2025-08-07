@@ -267,6 +267,147 @@ export type Database = {
           created_at?: string;
         };
       };
+      user_sessions: {
+        Row: {
+          id: string;
+          user_id: string;
+          session_token: string;
+          ip_address: string | null;
+          user_agent: string | null;
+          country: string | null;
+          region: string | null;
+          city: string | null;
+          timezone: string | null;
+          isp: string | null;
+          latitude: number | null;
+          longitude: number | null;
+          flag_url: string | null;
+          is_active: boolean;
+          last_activity: string;
+          created_at: string;
+          expires_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          session_token: string;
+          ip_address?: string | null;
+          user_agent?: string | null;
+          country?: string | null;
+          region?: string | null;
+          city?: string | null;
+          timezone?: string | null;
+          isp?: string | null;
+          latitude?: number | null;
+          longitude?: number | null;
+          flag_url?: string | null;
+          is_active?: boolean;
+          last_activity?: string;
+          created_at?: string;
+          expires_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          session_token?: string;
+          ip_address?: string | null;
+          user_agent?: string | null;
+          country?: string | null;
+          region?: string | null;
+          city?: string | null;
+          timezone?: string | null;
+          isp?: string | null;
+          latitude?: number | null;
+          longitude?: number | null;
+          flag_url?: string | null;
+          is_active?: boolean;
+          last_activity?: string;
+          created_at?: string;
+          expires_at?: string;
+        };
+      };
+      user_presence: {
+        Row: {
+          id: string;
+          user_id: string;
+          is_online: boolean;
+          last_seen: string;
+          current_session_id: string | null;
+          total_sessions: number;
+          total_online_time: string;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          is_online?: boolean;
+          last_seen?: string;
+          current_session_id?: string | null;
+          total_sessions?: number;
+          total_online_time?: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          is_online?: boolean;
+          last_seen?: string;
+          current_session_id?: string | null;
+          total_sessions?: number;
+          total_online_time?: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+      };
+      user_locations: {
+        Row: {
+          id: string;
+          user_id: string;
+          session_id: string;
+          ip_address: string;
+          country: string | null;
+          region: string | null;
+          city: string | null;
+          timezone: string | null;
+          isp: string | null;
+          latitude: number | null;
+          longitude: number | null;
+          flag_url: string | null;
+          detected_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          session_id: string;
+          ip_address: string;
+          country?: string | null;
+          region?: string | null;
+          city?: string | null;
+          timezone?: string | null;
+          isp?: string | null;
+          latitude?: number | null;
+          longitude?: number | null;
+          flag_url?: string | null;
+          detected_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          session_id?: string;
+          ip_address?: string;
+          country?: string | null;
+          region?: string | null;
+          city?: string | null;
+          timezone?: string | null;
+          isp?: string | null;
+          latitude?: number | null;
+          longitude?: number | null;
+          flag_url?: string | null;
+          detected_at?: string;
+        };
+      };
       kyc_documents: {
         Row: {
           id: string;

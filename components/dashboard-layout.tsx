@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { getCurrentUser, signOut } from "@/lib/auth";
+import { setUserOnline, setUserOffline } from "@/lib/user-presence";
 import { Button } from "@/components/ui/button";
 import {
   LayoutDashboard,
@@ -38,6 +39,13 @@ export default function DashboardLayout({
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const router = useRouter();
 
+  const handleUserPresenceCleanup = useCallback(() => {
+    if (user) {
+      setUserOffline(user.id).catch(console.error);
+      console.log("🔴 User presence ended for:", user.name);
+    }
+  }, [user]);
+
   useEffect(() => {
     const loadUser = async () => {
       try {
@@ -57,7 +65,12 @@ export default function DashboardLayout({
         }
 
         setUser(currentUser);
+
+        // Set user ONLINE immediately
+        console.log("🟢 Initializing presence for user:", currentUser.name);
+        await setUserOnline(currentUser.id);
       } catch (error) {
+        console.error("❌ Error in loadUser:", error);
         router.push("/auth/login");
       } finally {
         setLoading(false);
@@ -65,9 +78,16 @@ export default function DashboardLayout({
     };
 
     loadUser();
-  }, [router]);
+
+    // Cleanup function
+    return handleUserPresenceCleanup;
+  }, [router, handleUserPresenceCleanup]);
 
   const handleSignOut = async () => {
+    console.log("🔴 User signing out - stopping presence");
+    if (user) {
+      await setUserOffline(user.id);
+    }
     await signOut();
     router.push("/auth/login");
   };
