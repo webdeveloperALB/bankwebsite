@@ -94,7 +94,7 @@ export default function LoginPage() {
                   type="text"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="Enter your email or 'admin'"
+                  placeholder="Enter your email"
                   className="h-12 border-gray-200 focus:border-[#F26623] focus:ring-[#F26623] transition-colors"
                   required
                 />
