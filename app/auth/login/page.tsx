@@ -57,11 +57,11 @@ export default function LoginPage() {
           <div className="flex items-center justify-center">
             <div className="">
               <Image
-                src="/anchor3.svg"
+                src="/anchor2.png"
                 alt="SecureBank Logo"
                 width={48}
                 height={48}
-                className="h-44 w-44"
+                className="h-24 w-56"
               />
             </div>
           </div>
