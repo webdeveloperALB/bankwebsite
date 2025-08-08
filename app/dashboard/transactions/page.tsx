@@ -296,10 +296,10 @@ export default function TransactionsPage() {
                   <ArrowUpDown className="h-6 w-6 sm:h-8 sm:w-8 text-white" />
                 </div>
                 <div>
-                  <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-white mb-2">
+                  <h1 className="text-xl sm:text-3xl lg:text-4xl font-bold text-white mb-2">
                     Transaction Center
                   </h1>
-                  <p className="text-orange-100 text-sm sm:text-base lg:text-lg font-medium">
+                  <p className="text-xs sm:text-white lg:text-lg font-medium">
                     <span className="hidden sm:inline">
                       Secure banking transactions and transfer management
                     </span>
@@ -458,7 +458,7 @@ export default function TransactionsPage() {
                     <p className="text-white/80 text-sm font-medium">
                       Total Transactions
                     </p>
-                    <p className="text-white text-xl sm:text-2xl font-bold">
+                    <p className="text-lg sm:text-2xl font-bold text-white">
                       {transactions.length}
                     </p>
                   </div>
@@ -472,7 +472,7 @@ export default function TransactionsPage() {
                   </div>
                   <div>
                     <p className="text-white/80 text-sm font-medium">Sent</p>
-                    <p className="text-white text-xl sm:text-2xl font-bold">
+                    <p className="text-lg sm:text-2xl font-bold text-white">
                       {
                         transactions.filter(
                           (t) => t.user_id === user?.id && t.type === "transfer"
@@ -492,7 +492,7 @@ export default function TransactionsPage() {
                     <p className="text-white/80 text-sm font-medium">
                       Received
                     </p>
-                    <p className="text-white text-xl sm:text-2xl font-bold">
+                    <p className="text-lg sm:text-2xl font-bold text-white">
                       {
                         transactions.filter((t) => t.to_user_id === user?.id)
                           .length
@@ -525,7 +525,7 @@ export default function TransactionsPage() {
                 </div>
               </CardHeader>
               <CardContent className="p-0">
-                <div className="text-3xl font-bold text-gray-900 mb-2">
+                <div className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">
                   {transactions.length}
                 </div>
                 <p className="text-sm text-gray-600">All time activity</p>
@@ -551,7 +551,7 @@ export default function TransactionsPage() {
                 </div>
               </CardHeader>
               <CardContent className="p-0">
-                <div className="text-3xl font-bold text-gray-900 mb-2">
+                <div className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">
                   {
                     transactions.filter(
                       (t) => t.user_id === user?.id && t.type === "transfer"
@@ -581,7 +581,7 @@ export default function TransactionsPage() {
                 </div>
               </CardHeader>
               <CardContent className="p-0">
-                <div className="text-3xl font-bold text-gray-900 mb-2">
+                <div className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">
                   {transactions.filter((t) => t.to_user_id === user?.id).length}
                 </div>
                 <p className="text-sm text-gray-600">Money received</p>
@@ -599,7 +599,7 @@ export default function TransactionsPage() {
                   <CreditCard className="h-6 w-6 text-white" />
                 </div>
                 <div>
-                  <CardTitle className="text-xl sm:text-2xl font-bold text-white">
+                  <CardTitle className="text-lg sm:text-2xl font-bold text-white">
                     Transaction History
                   </CardTitle>
                   <CardDescription className="text-orange-100">
@@ -669,11 +669,11 @@ export default function TransactionsPage() {
                     >
                       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
                         <div className="flex items-center space-x-4">
-                          <div className="bg-gradient-to-br from-[#F26623] to-[#E55A1F] rounded-full w-12 h-12 flex items-center justify-center shadow-lg">
+                          <div className="bg-white rounded-full w-12 h-12 flex items-center justify-center shadow-lg">
                             {getTransactionIcon(transaction)}
                           </div>
                           <div>
-                            <p className="font-bold text-gray-900 text-lg">
+                            <p className="font-bold text-gray-900 text-base sm:text-lg">
                               {getTransactionDescription(transaction)}
                             </p>
                             <div className="flex items-center space-x-2 mt-1">
@@ -691,7 +691,7 @@ export default function TransactionsPage() {
                         </div>
                         <div className="text-right sm:text-left">
                           <p
-                            className={`text-2xl font-bold ${colorClass} mb-1`}
+                            className={`text-xl sm:text-2xl font-bold ${colorClass} mb-1`}
                           >
                             {sign}
                             {amount}
@@ -716,7 +716,7 @@ export default function TransactionsPage() {
                 <div className="bg-gradient-to-br from-[#F26623]/10 to-[#E55A1F]/20 rounded-full w-32 h-32 flex items-center justify-center mx-auto mb-8">
                   <ArrowUpDown className="h-16 w-16 text-[#F26623]" />
                 </div>
-                <h3 className="text-2xl font-bold text-gray-900 mb-4">
+                <h3 className="text-xl sm:text-2xl font-bold text-gray-900 mb-4">
                   No Transactions Yet
                 </h3>
                 <p className="text-gray-600 mb-8 max-w-md mx-auto">
@@ -725,7 +725,7 @@ export default function TransactionsPage() {
                 </p>
                 <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
                   <DialogTrigger asChild>
-                    <Button className="bg-gradient-to-r from-[#F26623] to-[#E55A1F] hover:from-[#E55A1F] hover:to-[#D94E1A] text-white font-semibold px-8 py-4 text-lg">
+                    <Button className="bg-gradient-to-r from-[#F26623] to-[#E55A1F] hover:from-[#E55A1F] hover:to-[#D94E1A] text-white font-semibold px-8 py-4 text-base sm:text-lg">
                       <Send className="h-5 w-5 mr-2" />
                       Send Your First Transfer
                     </Button>

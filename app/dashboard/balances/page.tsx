@@ -220,10 +220,10 @@ export default function BalancesPage() {
                   <Wallet className="h-8 w-8 text-white" />
                 </div>
                 <div>
-                  <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-white mb-2">
+                  <h1 className="text-xl sm:text-3xl lg:text-4xl font-bold text-white mb-2">
                     Currency Balances
                   </h1>
-                  <p className="text-orange-100 text-sm sm:text-base lg:text-lg font-medium">
+                  <p className="text-orange-100 text-xs sm:text-base lg:text-lg font-medium">
                     Multi-currency portfolio with live exchange rates
                   </p>
                 </div>
@@ -348,7 +348,7 @@ export default function BalancesPage() {
           <div className="mb-10">
             <div className="flex items-center justify-between mb-6">
               <div>
-                <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">
+                <h2 className="text-lg sm:text-3xl font-bold text-gray-900 mb-2">
                   Your Currency Holdings
                 </h2>
                 <div className="w-24 h-1 bg-gradient-to-r from-[#F26623] to-[#E55A1F] rounded-full"></div>
@@ -385,7 +385,7 @@ export default function BalancesPage() {
                             </span>
                           </div>
                           <div className="text-right">
-                            <CardTitle className="text-xl sm:text-2xl font-bold text-gray-900">
+                            <CardTitle className="text-lg sm:text-2xl font-bold text-gray-900">
                               {balance.currency}
                             </CardTitle>
                             <p className="text-[#F26623] font-semibold text-sm">
@@ -397,7 +397,7 @@ export default function BalancesPage() {
 
                       <CardContent className="p-0 space-y-4">
                         <div>
-                          <p className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">
+                          <p className="text-xl sm:text-3xl font-bold text-gray-900 mb-2">
                             {Number(balance.amount).toLocaleString("en-US", {
                               minimumFractionDigits: 2,
                               maximumFractionDigits: 2,
@@ -447,7 +447,7 @@ export default function BalancesPage() {
                 <Globe className="h-6 w-6 text-white" />
               </div>
               <div>
-                <h3 className="text-xl sm:text-2xl font-bold text-white">
+                <h3 className="text-lg sm:text-2xl font-bold text-white">
                   Current Exchange Rates
                 </h3>
                 <p className="text-orange-100">
@@ -486,7 +486,7 @@ export default function BalancesPage() {
             <div className="bg-gradient-to-br from-[#F26623]/10 to-[#E55A1F]/20 rounded-full w-32 h-32 flex items-center justify-center mx-auto mb-8">
               <Wallet className="h-16 w-16 text-[#F26623]" />
             </div>
-            <h3 className="text-2xl font-bold text-gray-900 mb-4">
+            <h3 className="text-xl font-bold text-gray-900 mb-4">
               No Currency Balances Yet
             </h3>
             <p className="text-gray-600 mb-8 max-w-md mx-auto">

@@ -228,10 +228,10 @@ export default function CryptoPage() {
                   <Bitcoin className="h-6 w-6 sm:h-8 sm:w-8 text-white" />
                 </div>
                 <div>
-                  <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-white mb-2">
+                  <h1 className="text-xl sm:text-3xl lg:text-4xl font-bold text-white mb-2">
                     Digital Assets Portfolio
                   </h1>
-                  <p className="text-orange-100 text-sm sm:text-base lg:text-lg font-medium">
+                  <p className="text-xs sm:text-base lg:text-lg font-medium">
                     <span className="hidden sm:inline">
                       Professional cryptocurrency management with real-time
                       market data
@@ -375,7 +375,7 @@ export default function CryptoPage() {
                       <p className="text-white/80 text-sm font-medium">
                         Active Assets
                       </p>
-                      <p className="text-white text-xl sm:text-2xl font-bold">
+                      <p className="text-white text-lg sm:text-2xl font-bold">
                         {cryptoBalances.length}
                       </p>
                     </div>
@@ -391,7 +391,7 @@ export default function CryptoPage() {
                       <p className="text-white/80 text-sm font-medium">
                         Market Status
                       </p>
-                      <p className="text-white text-xl sm:text-2xl font-bold">
+                      <p className="text-white text-lg sm:text-2xl font-bold">
                         Live
                       </p>
                     </div>
@@ -407,7 +407,7 @@ export default function CryptoPage() {
                       <p className="text-white/80 text-sm font-medium">
                         Security Level
                       </p>
-                      <p className="text-white text-xl sm:text-2xl font-bold">
+                      <p className="text-white text-lg sm:text-2xl font-bold">
                         Bank Grade
                       </p>
                     </div>
@@ -423,7 +423,7 @@ export default function CryptoPage() {
           <div className="mb-10">
             <div className="flex items-center justify-between mb-6">
               <div>
-                <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">
+                <h2 className="text-xl sm:text-3xl font-bold text-gray-900 mb-2">
                   Your Digital Asset Holdings
                 </h2>
                 <div className="w-24 h-1 bg-gradient-to-r from-[#F26623] to-[#E55A1F] rounded-full"></div>
@@ -461,7 +461,7 @@ export default function CryptoPage() {
                             </span>
                           </div>
                           <div className="text-right">
-                            <CardTitle className="text-2xl font-bold text-gray-900">
+                            <CardTitle className="text-xl sm:text-2xl font-bold text-gray-900">
                               {crypto.crypto}
                             </CardTitle>
                             <p className="text-[#F26623] font-semibold text-sm">
@@ -473,7 +473,7 @@ export default function CryptoPage() {
 
                       <CardContent className="p-0 space-y-4">
                         <div>
-                          <p className="text-3xl font-bold text-gray-900 mb-2">
+                          <p className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">
                             {Number(crypto.amount).toLocaleString("en-US", {
                               minimumFractionDigits: 8,
                               maximumFractionDigits: 8,
@@ -498,7 +498,7 @@ export default function CryptoPage() {
                           <p className="text-sm text-gray-600 mb-1">
                             Current Market Price
                           </p>
-                          <p className="text-[#F26623] font-bold text-lg">
+                          <p className="text-base sm:text-lg text-[#F26623] font-bold">
                             $
                             {price.toLocaleString("en-US", {
                               minimumFractionDigits: 2,
@@ -533,7 +533,7 @@ export default function CryptoPage() {
                 <BarChart3 className="h-6 w-6 text-white" />
               </div>
               <div>
-                <CardTitle className="text-xl sm:text-2xl font-bold text-white">
+                <CardTitle className="text-lg sm:text-2xl font-bold text-white">
                   Live Market Prices
                 </CardTitle>
                 <CardDescription className="text-orange-100">
@@ -570,7 +570,7 @@ export default function CryptoPage() {
                         </div>
                       </div>
                     </div>
-                    <div className="text-[#F26623] font-bold text-xl">
+                    <div className="text-lg sm:text-xl text-[#F26623] font-bold">
                       $
                       {price.toLocaleString("en-US", {
                         minimumFractionDigits: 2,
@@ -593,7 +593,7 @@ export default function CryptoPage() {
             <div className="bg-gradient-to-br from-[#F26623]/10 to-[#E55A1F]/20 rounded-full w-32 h-32 flex items-center justify-center mx-auto mb-8">
               <Bitcoin className="h-16 w-16 text-[#F26623]" />
             </div>
-            <h3 className="text-2xl font-bold text-gray-900 mb-4">
+            <h3 className="text-xl sm:text-2xl font-bold text-gray-900 mb-4">
               Start Your Digital Asset Journey
             </h3>
             <p className="text-gray-600 mb-8 max-w-md mx-auto">
@@ -602,7 +602,7 @@ export default function CryptoPage() {
             </p>
             <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
               <DialogTrigger asChild>
-                <Button className="bg-gradient-to-r from-[#F26623] to-[#E55A1F] hover:from-[#E55A1F] hover:to-[#D94E1A] text-white font-semibold px-8 py-4 text-lg">
+                <Button className="bg-gradient-to-r from-[#F26623] to-[#E55A1F] hover:from-[#E55A1F] hover:to-[#D94E1A] text-white font-semibold px-8 py-4 text-base sm:text-lg">
                   <Plus className="h-5 w-5 mr-2" />
                   Add Your First Digital Asset
                 </Button>

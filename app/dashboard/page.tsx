@@ -145,7 +145,7 @@ export default function DashboardPage() {
           .select("*")
           .or(`user_id.eq.${currentUser.id},to_user_id.eq.${currentUser.id}`)
           .order("created_at", { ascending: false })
-          .limit(5);
+          .limit(3);
 
         setRecentTransactions(transactionsData || []);
 
@@ -252,7 +252,7 @@ export default function DashboardPage() {
                   `user_id.eq.${currentUser.id},to_user_id.eq.${currentUser.id}`
                 )
                 .order("created_at", { ascending: false })
-                .limit(5)
+                .limit(3)
                 .then(({ data }) => setRecentTransactions(data || []));
             }
           )
@@ -454,10 +454,10 @@ export default function DashboardPage() {
           <div className="relative z-10">
             <div className="flex items-center justify-between mb-6">
               <div>
-                <h1 className="text-4xl font-bold text-white mb-2">
+                <h1 className="text-2xl sm:text-4xl font-bold text-white mb-2">
                   Welcome back, {user?.name || "Valued Client"}
                 </h1>
-                <p className="text-orange-100 text-lg font-medium">
+                <p className="text-orange-100 text-sm sm:text-lg font-medium">
                   Your comprehensive financial dashboard
                 </p>
               </div>
@@ -474,7 +474,7 @@ export default function DashboardPage() {
         <div className="mb-10">
           <div className="flex items-center justify-between mb-8">
             <div>
-              <h2 className="text-3xl font-bold text-gray-900 mb-2">
+              <h2 className="text-xl sm:text-3xl font-bold text-gray-900 mb-2">
                 Currency Accounts
               </h2>
               <div className="w-24 h-1 bg-gradient-to-r from-[#F26623] to-[#E55A1F] rounded-full"></div>
@@ -500,7 +500,7 @@ export default function DashboardPage() {
                         <CurrencyIcon currency={currency} />
                       </div>
                       <div className="text-right">
-                        <h3 className="text-2xl font-bold text-gray-900">
+                        <h3 className="text-lg sm:text-2xl font-bold text-gray-900">
                           {currency}
                         </h3>
                         <p className="text-[#F26623] font-semibold text-sm">
@@ -511,7 +511,7 @@ export default function DashboardPage() {
 
                     <div className="space-y-4">
                       <div>
-                        <p className="text-4xl font-bold text-gray-900 mb-2">
+                        <p className="text-2xl sm:text-4xl font-bold text-gray-900 mb-2">
                           {amount.toLocaleString("en-US", {
                             minimumFractionDigits: 2,
                             maximumFractionDigits: 2,
@@ -565,7 +565,7 @@ export default function DashboardPage() {
         <div className="mb-10">
           <div className="flex items-center justify-between mb-8">
             <div>
-              <h2 className="text-3xl font-bold text-gray-900 mb-2">
+              <h2 className="text-xl sm:text-3xl font-bold text-gray-900 mb-2">
                 Digital Assets Portfolio
               </h2>
               <div className="w-24 h-1 bg-gradient-to-r from-[#F26623] to-[#E55A1F] rounded-full"></div>
@@ -595,7 +595,7 @@ export default function DashboardPage() {
                         <CryptoIcon crypto={cryptoSymbol} />
                       </div>
                       <div className="text-right">
-                        <h3 className="text-2xl font-bold text-gray-900">
+                        <h3 className="text-lg sm:text-2xl font-bold text-gray-900">
                           {cryptoSymbol}
                         </h3>
                         <p className="text-[#F26623] font-semibold text-sm">
@@ -606,7 +606,7 @@ export default function DashboardPage() {
 
                     <div className="space-y-4">
                       <div>
-                        <p className="text-3xl font-bold text-gray-900 mb-2">
+                        <p className="text-xl sm:text-3xl font-bold text-gray-900 mb-2">
                           {amount.toLocaleString("en-US", {
                             minimumFractionDigits: 8,
                             maximumFractionDigits: 8,
@@ -670,7 +670,7 @@ export default function DashboardPage() {
                     <MessageSquare className="h-6 w-6 text-white" />
                   </div>
                   <div>
-                    <h3 className="text-xl font-bold text-white">
+                    <h3 className="text-lg sm:text-xl font-bold text-white">
                       Communications
                     </h3>
                     <p className="text-orange-100">
@@ -756,7 +756,7 @@ export default function DashboardPage() {
                   <div className="bg-gradient-to-br from-[#F26623]/10 to-[#E55A1F]/20 rounded-full w-24 h-24 flex items-center justify-center mx-auto mb-6">
                     <MessageSquare className="h-12 w-12 text-[#F26623]" />
                   </div>
-                  <h4 className="text-xl font-bold text-gray-900 mb-2">
+                  <h4 className="text-lg sm:text-xl font-bold text-gray-900 mb-2">
                     No Messages Yet
                   </h4>
                   <p className="text-gray-600 mb-6">
@@ -781,7 +781,7 @@ export default function DashboardPage() {
                   <ArrowUpDown className="h-6 w-6 text-white" />
                 </div>
                 <div>
-                  <h3 className="text-xl font-bold text-white">
+                  <h3 className="text-lg sm:text-xl font-bold text-white">
                     Recent Activity
                   </h3>
                   <p className="text-orange-100">Your latest transactions</p>
@@ -815,7 +815,7 @@ export default function DashboardPage() {
                             {index + 1}
                           </div>
                           <div>
-                            <p className="font-bold text-gray-900 text-lg">
+                            <p className="font-bold text-gray-900 text-sm sm:text-lg">
                               {transaction.type}
                             </p>
                             <div className="bg-[#F26623]/10 text-[#F26623] px-3 py-1 rounded-full text-xs font-semibold inline-block mt-1">
@@ -826,7 +826,7 @@ export default function DashboardPage() {
                           </div>
                         </div>
                         <div className="text-right">
-                          <p className="text-2xl font-bold text-gray-900">
+                          <p className="text-lg sm:text-2xl font-bold text-gray-900">
                             {transaction.amount} {transaction.currency}
                           </p>
                           <p className="text-[#F26623] font-bold">
@@ -851,7 +851,7 @@ export default function DashboardPage() {
                   <div className="bg-gradient-to-br from-[#F26623]/10 to-[#E55A1F]/20 rounded-full w-24 h-24 flex items-center justify-center mx-auto mb-6">
                     <ArrowUpDown className="h-12 w-12 text-[#F26623]" />
                   </div>
-                  <h4 className="text-xl font-bold text-gray-900 mb-2">
+                  <h4 className="text-lg sm:text-xl font-bold text-gray-900 mb-2">
                     No Transactions Yet
                   </h4>
                   <p className="text-gray-600 mb-2">
