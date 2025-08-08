@@ -47,7 +47,7 @@ type Balance = Database["public"]["Tables"]["balances"]["Row"] & {
   users?: { name: string; email: string };
 };
 
-const CURRENCIES = ["USD", "EUR", "GBP", "CAD", "AUD", "JPY", "CHF", "CNY"];
+const CURRENCIES = ["USD", "EUR", "GBP", "CAD", "AUD", "JPY", "CHF"];
 
 export default function BalancesTab() {
   const [balances, setBalances] = useState<Balance[]>([]);

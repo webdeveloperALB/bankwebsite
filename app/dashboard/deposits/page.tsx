@@ -29,7 +29,7 @@ type User = Database["public"]["Tables"]["users"]["Row"];
 type Balance = Database["public"]["Tables"]["balances"]["Row"];
 type Transaction = Database["public"]["Tables"]["transactions"]["Row"];
 
-const CURRENCIES = ["USD", "EUR", "GBP", "CAD", "AUD", "JPY", "CHF", "CNY"];
+const CURRENCIES = ["USD", "EUR", "GBP", "CAD", "AUD", "JPY", "CHF"];
 
 export default function DepositsPage() {
   const [user, setUser] = useState<User | null>(null);

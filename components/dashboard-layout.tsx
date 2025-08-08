@@ -169,18 +169,23 @@ export default function DashboardLayout({
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-orange-50 to-amber-50">
         <div className="text-center">
+          {/* Image replaces spinner */}
           <div className="relative">
-            <div className="animate-spin rounded-full h-20 w-20 border-4 border-[#F26623]/20"></div>
-            <div className="animate-spin rounded-full h-20 w-20 border-4 border-t-[#F26623] absolute top-0 left-0"></div>
+            <Image
+              src="/anchor3.svg"
+              alt="Loading"
+              width={250}
+              height={0}
+              className="mx-auto"
+              priority
+            />
           </div>
+
           <div className="mt-6">
-            <div className="bg-gradient-to-r from-[#F26623] to-[#E55A1F] rounded-full p-3 inline-block mb-4">
-              <Building2 className="h-8 w-8 text-white" />
-            </div>
-            <p className="text-[#F26623] font-semibold text-lg">
+            <p className="text-[#F26623] font-semibold text-xl">
               Loading your banking dashboard...
             </p>
-            <p className="text-gray-600 text-sm mt-2">
+            <p className="text-gray-600 text-lg mt-0">
               Please wait while we secure your session
             </p>
           </div>

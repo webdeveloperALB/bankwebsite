@@ -17,7 +17,7 @@ type Transaction = Database['public']['Tables']['transactions']['Row'] & {
   to_users?: { name: string; email: string }
 }
 
-const CURRENCIES = ['USD', 'EUR', 'GBP', 'CAD', 'AUD', 'JPY', 'CHF', 'CNY']
+const CURRENCIES = ['USD', 'EUR', 'GBP', 'CAD', 'AUD', 'JPY', 'CHF',]
 
 export default function TransactionsTab() {
   const [transactions, setTransactions] = useState<Transaction[]>([])

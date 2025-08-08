@@ -92,7 +92,6 @@ class RealExchangeRateManager {
           AUD: data.rates.AUD || 1.5,
           JPY: data.rates.JPY || 110,
           CHF: data.rates.CHF || 0.92,
-          CNY: data.rates.CNY || 7.2,
         };
 
         console.log("💱 REAL Currency Rates Updated:", {
@@ -183,7 +182,6 @@ class RealExchangeRateManager {
               AUD: data.rates.AUD || this.rates.AUD,
               JPY: data.rates.JPY || this.rates.JPY,
               CHF: data.rates.CHF || this.rates.CHF,
-              CNY: data.rates.CNY || this.rates.CNY,
             };
             console.log("✅ Backup currency API successful");
             this.notifySubscribers();
