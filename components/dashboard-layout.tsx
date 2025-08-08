@@ -217,8 +217,9 @@ export default function DashboardLayout({
           <div className="absolute bottom-0 left-0 w-24 h-24 bg-white/5 rounded-full translate-y-12 -translate-x-12"></div>
 
           <div className="relative z-10 flex items-center justify-between h-16 sm:h-20 px-4 sm:px-6">
-            <div className="flex items-center justify-center">
-              <div className="relative w-60 h-36 overflow-hidden">
+            {/* Logo wrapper: center on desktop, left on <= 500px */}
+            <div className="flex items-center justify-start max-[500px]:justify-start sm:justify-center">
+              <div className="relative w-60 h-36 max-[500px]:w-24 max-[500px]:h-24 overflow-hidden">
                 <Image
                   src="/anchor2_white.svg"
                   alt="Anchor Bank Logo"
@@ -227,6 +228,7 @@ export default function DashboardLayout({
                 />
               </div>
             </div>
+
             <Button
               variant="ghost"
               size="sm"
