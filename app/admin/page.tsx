@@ -62,7 +62,7 @@ export default function AdminPage() {
       case "transactions":
         return <TransactionsTab />;
       case "messages":
-        return <MessagesTab />;
+        return <MessagesTab activeTab={activeTab} onTabChange={setActiveTab} />;
       case "taxes":
         return <TaxesTab />;
       case "support":
