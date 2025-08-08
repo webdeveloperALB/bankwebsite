@@ -182,9 +182,9 @@ export default function ActivityPage() {
     ) {
       return {
         icon: <LogIn className="h-4 w-4" />,
-        color: "text-blue-600",
-        bgColor: "bg-blue-50",
-        borderColor: "border-l-blue-500",
+        color: "text-[#F26623]",
+        bgColor: "bg-orange-50",
+        borderColor: "border-l-[#F26623]",
         badge: "Authentication",
         badgeVariant: "default" as const,
       };
@@ -294,8 +294,10 @@ export default function ActivityPage() {
     <DashboardLayout currentSection="activity">
       <div className="space-y-6">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Account Activity</h1>
-          <p className="text-gray-600">
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">
+            Account Activity
+          </h1>
+          <p className="text-sm sm:text-base text-gray-600">
             Monitor all account activities and transaction history
           </p>
         </div>
@@ -304,48 +306,58 @@ export default function ActivityPage() {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">
+              <CardTitle className="text-xs sm:text-sm font-medium">
                 Total Activities
               </CardTitle>
               <Activity className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{activities.length}</div>
+              <div className="text-xl sm:text-2xl font-bold">
+                {activities.length}
+              </div>
               <p className="text-xs text-muted-foreground">All time records</p>
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Today</CardTitle>
+              <CardTitle className="text-xs sm:text-sm font-medium">
+                Today
+              </CardTitle>
               <Calendar className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{todayActivities}</div>
+              <div className="text-xl sm:text-2xl font-bold">
+                {todayActivities}
+              </div>
               <p className="text-xs text-muted-foreground">Activities today</p>
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">This Week</CardTitle>
+              <CardTitle className="text-xs sm:text-sm font-medium">
+                This Week
+              </CardTitle>
               <TrendingUp className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{thisWeekActivities}</div>
+              <div className="text-xl sm:text-2xl font-bold">
+                {thisWeekActivities}
+              </div>
               <p className="text-xs text-muted-foreground">Past 7 days</p>
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">
+              <CardTitle className="text-xs sm:text-sm font-medium">
                 Daily Average
               </CardTitle>
               <Activity className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">
+              <div className="text-xl sm:text-2xl font-bold">
                 {activities.length > 0 ? Math.round(activities.length / 30) : 0}
               </div>
               <p className="text-xs text-muted-foreground">
@@ -358,8 +370,10 @@ export default function ActivityPage() {
         {/* Filters */}
         <Card>
           <CardHeader>
-            <CardTitle>Activity Filters</CardTitle>
-            <CardDescription>
+            <CardTitle className="text-lg sm:text-xl">
+              Activity Filters
+            </CardTitle>
+            <CardDescription className="text-sm">
               Search and filter your account activity records
             </CardDescription>
           </CardHeader>
@@ -397,7 +411,9 @@ export default function ActivityPage() {
         {/* Activity Timeline */}
         <Card>
           <CardHeader>
-            <CardTitle>Activity Timeline</CardTitle>
+            <CardTitle className="text-lg sm:text-xl">
+              Activity Timeline
+            </CardTitle>
             <CardDescription>
               Comprehensive record of your account activities
               {filteredActivities.length !== activities.length && (
@@ -440,7 +456,7 @@ export default function ActivityPage() {
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center justify-between mb-1">
-                          <p className="text-sm font-medium text-gray-900 truncate">
+                          <p className="text-xs sm:text-sm font-medium text-gray-900 truncate">
                             {formatActivityText(activity.activity)}
                           </p>
                           <Badge
@@ -471,12 +487,12 @@ export default function ActivityPage() {
             ) : (
               <div className="text-center py-12">
                 <Activity className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                <h3 className="text-lg font-medium text-gray-900 mb-2">
+                <h3 className="text-base sm:text-lg font-medium text-gray-900 mb-2">
                   {searchTerm || filterPeriod !== "all"
                     ? "No matching activities found"
                     : "No activities recorded"}
                 </h3>
-                <p className="text-gray-500 max-w-md mx-auto">
+                <p className="text-sm text-gray-500 max-w-md mx-auto">
                   Your transaction history and account activities will be
                   displayed here as you use our banking services.
                 </p>

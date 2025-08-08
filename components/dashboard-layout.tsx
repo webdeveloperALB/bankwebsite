@@ -391,6 +391,7 @@ export default function DashboardLayout({
                 {new Date().toLocaleTimeString("en-US", {
                   hour: "2-digit",
                   minute: "2-digit",
+                  hour12: false,
                 })}
               </p>
             </div>
@@ -407,6 +408,7 @@ export default function DashboardLayout({
                 {new Date().toLocaleTimeString("en-US", {
                   hour: "2-digit",
                   minute: "2-digit",
+                  hour12: false,
                 })}
               </p>
             </div>
@@ -429,6 +431,7 @@ export default function DashboardLayout({
                     {new Date().toLocaleTimeString("en-US", {
                       hour: "2-digit",
                       minute: "2-digit",
+                      hour12: false,
                     })}
                   </p>
                 </div>
