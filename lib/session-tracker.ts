@@ -25,12 +25,12 @@ class SessionTracker {
   }
 
   async logUserLogin(userId: string): Promise<void> {
-    console.log("📝 Logging user login:", userId);
+    console.log("Logging user login:", userId);
 
     try {
       // Get user's location with fallback
       const location = await this.fetchUserLocation();
-      console.log("🌍 Location fetched:", location);
+      console.log("Location fetched:", location);
 
       // Create session record
       const sessionToken = `session_${userId}_${Date.now()}`;
@@ -51,8 +51,6 @@ class SessionTracker {
         created_at: new Date().toISOString(),
       };
 
-      console.log("💾 Creating session:", sessionData);
-
       const { data: session, error: sessionError } = await supabase
         .from("user_sessions")
         .insert(sessionData)
@@ -60,11 +58,10 @@ class SessionTracker {
         .single();
 
       if (sessionError) {
-        console.error("❌ Session creation error:", sessionError);
-        // Continue anyway to log location
+        console.error("Session creation error:", sessionError);
       }
 
-      // Log location data (always log, even if session creation fails)
+      // Log location data
       const locationData = {
         user_id: userId,
         session_id: session?.id || null,
@@ -80,60 +77,25 @@ class SessionTracker {
         detected_at: new Date().toISOString(),
       };
 
-      console.log("📍 Logging location:", locationData);
-
       const { error: locationError } = await supabase
         .from("user_locations")
         .insert(locationData);
 
       if (locationError) {
-        console.error("❌ Location logging error:", locationError);
-      } else {
-        console.log("✅ Location logged successfully");
+        console.error("Location logging error:", locationError);
       }
 
-      // Log activity
-      const { error: activityError } = await supabase
-        .from("activity_logs")
-        .insert({
-          user_id: userId,
-          activity: `🟢 LOGIN: ${location.city}, ${location.country} (${location.ip})`,
-          created_at: new Date().toISOString(),
-        });
+      // DO NOT log any login activity to activity_logs table that clients can see
+      // Only log to internal systems or separate admin tables
 
-      if (activityError) {
-        console.error("❌ Activity logging error:", activityError);
-      }
-
-      console.log("✅ User login logged successfully");
+      console.log("User login logged successfully");
     } catch (error) {
-      console.error("❌ Error logging user login:", error);
-
-      // Fallback: log basic login without location
-      try {
-        await supabase.from("user_locations").insert({
-          user_id: userId,
-          session_id: null,
-          ip_address: "Error fetching IP",
-          country: "Unknown",
-          region: "Unknown",
-          city: "Unknown",
-          timezone: "UTC",
-          isp: "Unknown ISP",
-          latitude: 0,
-          longitude: 0,
-          flag_url: "https://flagcdn.com/24x18/us.png",
-          detected_at: new Date().toISOString(),
-        });
-        console.log("✅ Fallback login logged");
-      } catch (fallbackError) {
-        console.error("❌ Fallback logging failed:", fallbackError);
-      }
+      console.error("Error logging user login:", error);
     }
   }
 
   async logUserLogout(userId: string): Promise<void> {
-    console.log("📝 Logging user logout:", userId);
+    console.log("Logging user logout:", userId);
 
     try {
       // Deactivate all active sessions for this user
@@ -146,21 +108,18 @@ class SessionTracker {
         .eq("user_id", userId)
         .eq("is_active", true);
 
-      // Log activity
-      await supabase.from("activity_logs").insert({
-        user_id: userId,
-        activity: "🔴 LOGOUT: User signed out",
-      });
+      // DO NOT log any logout activity to activity_logs table that clients can see
+      // Only internal tracking
 
-      console.log("✅ User logout logged");
+      console.log("User logout logged");
     } catch (error) {
-      console.error("❌ Error logging user logout:", error);
+      console.error("Error logging user logout:", error);
     }
   }
 
   private async fetchUserLocation(): Promise<LocationData> {
     try {
-      console.log("🌍 Fetching location from API...");
+      console.log("Fetching location from API...");
 
       // Try the API route first
       const response = await fetch("/api/user-location", {
@@ -172,18 +131,18 @@ class SessionTracker {
 
       if (response.ok) {
         const data = await response.json();
-        console.log("✅ Location API success:", data);
+        console.log("Location API success:", data);
         return data;
       } else {
         console.error(
-          "❌ Location API failed:",
+          "Location API failed:",
           response.status,
           response.statusText
         );
         throw new Error(`API failed: ${response.status}`);
       }
     } catch (error) {
-      console.error("❌ Location fetch failed:", error);
+      console.error("Location fetch failed:", error);
 
       // Return fallback data
       const fallback = {
@@ -198,14 +157,14 @@ class SessionTracker {
         flag: "https://flagcdn.com/24x18/us.png",
       };
 
-      console.log("⚠️ Using fallback location:", fallback);
+      console.log("Using fallback location:", fallback);
       return fallback;
     }
   }
 
   async getUserHistory(): Promise<any[]> {
     try {
-      console.log("📋 Fetching user history...");
+      console.log("Fetching user history...");
 
       // Get users with their latest location data
       const { data: users, error: usersError } = await supabase
@@ -215,7 +174,7 @@ class SessionTracker {
         .order("created_at", { ascending: false });
 
       if (usersError) {
-        console.error("❌ Users query error:", usersError);
+        console.error("Users query error:", usersError);
         return [];
       }
 
@@ -226,10 +185,10 @@ class SessionTracker {
         .order("detected_at", { ascending: false });
 
       if (locationsError) {
-        console.error("❌ Locations query error:", locationsError);
+        console.error("Locations query error:", locationsError);
       }
 
-      console.log("📍 Total locations found:", allLocations?.length || 0);
+      console.log("Total locations found:", allLocations?.length || 0);
 
       const processedUsers = (users || []).map((user) => {
         // Get all locations for this user
@@ -241,7 +200,7 @@ class SessionTracker {
         const latestLocation = userLocations[0]; // Already sorted by detected_at DESC
 
         console.log(
-          `👤 User ${user.name}: ${userLocations.length} locations, latest:`,
+          `User ${user.name}: ${userLocations.length} locations, latest:`,
           latestLocation?.detected_at
         );
 
@@ -265,10 +224,10 @@ class SessionTracker {
         };
       });
 
-      console.log(`📋 Processed ${processedUsers.length} users`);
+      console.log(`Processed ${processedUsers.length} users`);
       return processedUsers;
     } catch (error) {
-      console.error("❌ Error getting user history:", error);
+      console.error("Error getting user history:", error);
       return [];
     }
   }
@@ -290,4 +249,4 @@ export const getUserHistory = async (): Promise<any[]> => {
   return await sessionTracker.getUserHistory();
 };
 
-console.log("📝 Session Tracker initialized - login/logout logging only");
+console.log("Session Tracker initialized - Professional banking format");

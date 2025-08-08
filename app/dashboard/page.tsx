@@ -44,9 +44,9 @@ function CurrencyIcon({ currency }: { currency: string }) {
   const [hasError, setHasError] = useState(false);
 
   const currencyLogos: { [key: string]: string } = {
-    USD: "/icons/dollar.png",
-    EUR: "/icons/euro.png",
-    GBP: "/icons/pound.png",
+    USD: "/icons/dollar.svg",
+    EUR: "/icons/euro.svg",
+    GBP: "/icons/pound.svg",
   };
 
   if (hasError) {
@@ -55,7 +55,7 @@ function CurrencyIcon({ currency }: { currency: string }) {
 
   return (
     <Image
-      src={currencyLogos[currency]}
+      src={currencyLogos[currency] || "/placeholder.svg"}
       alt={`${currency} logo`}
       width={32}
       height={32}
@@ -80,7 +80,7 @@ function CryptoIcon({ crypto }: { crypto: string }) {
 
   return (
     <Image
-      src={cryptoLogos[crypto]}
+      src={cryptoLogos[crypto] || "/placeholder.svg"}
       alt={`${crypto} logo`}
       width={32}
       height={32}
@@ -97,7 +97,7 @@ export default function DashboardPage() {
   const [recentTransactions, setRecentTransactions] = useState<Transaction[]>(
     []
   );
-  const [latestMessage, setLatestMessage] = useState<Message | null>(null);
+  const [latestMessages, setLatestMessages] = useState<Message[]>([]);
   const [unreadMessages, setUnreadMessages] = useState(0);
   const [latestMessageRead, setLatestMessageRead] = useState(false);
   const [markingAsRead, setMarkingAsRead] = useState(false);
@@ -149,16 +149,16 @@ export default function DashboardPage() {
 
         setRecentTransactions(transactionsData || []);
 
-        // Load latest message and unread count
+        // Load latest messages (get 3 instead of 1)
         const { data: messagesData } = await supabase
           .from("messages")
           .select("*")
           .eq("user_id", currentUser.id)
           .order("created_at", { ascending: false })
-          .limit(1);
+          .limit(3);
 
         if (messagesData && messagesData.length > 0) {
-          setLatestMessage(messagesData[0]);
+          setLatestMessages(messagesData);
         }
 
         // Count unread messages (admin messages not in read status)
@@ -177,7 +177,7 @@ export default function DashboardPage() {
 
         setUnreadMessages(unreadData?.length || 0);
 
-        // Check if latest message is read
+        // Check if latest message is read (only check the first/most recent one)
         if (
           messagesData &&
           messagesData.length > 0 &&
@@ -192,7 +192,7 @@ export default function DashboardPage() {
 
           setLatestMessageRead(!!readStatus);
         } else {
-          setLatestMessageRead(true); // User messages are always "read"
+          setLatestMessageRead(true);
         }
 
         // Set up real-time subscriptions
@@ -269,16 +269,16 @@ export default function DashboardPage() {
               filter: `user_id=eq.${currentUser.id}`,
             },
             () => {
-              // Reload latest message
+              // Reload latest messages (get 3)
               supabase
                 .from("messages")
                 .select("*")
                 .eq("user_id", currentUser.id)
                 .order("created_at", { ascending: false })
-                .limit(1)
+                .limit(3)
                 .then(({ data }) => {
                   if (data && data.length > 0) {
-                    setLatestMessage(data[0]);
+                    setLatestMessages(data);
                   }
                 });
 
@@ -330,13 +330,13 @@ export default function DashboardPage() {
                   setUnreadMessages(data?.length || 0);
                 });
 
-              // Update latest message read status
-              if (latestMessage && latestMessage.from_admin) {
+              // Update latest message read status (check first message)
+              if (latestMessages.length > 0 && latestMessages[0].from_admin) {
                 supabase
                   .from("message_read_status")
                   .select("id")
                   .eq("user_id", currentUser.id)
-                  .eq("message_id", latestMessage.id)
+                  .eq("message_id", latestMessages[0].id)
                   .single()
                   .then(({ data }) => {
                     setLatestMessageRead(!!data);
@@ -362,7 +362,7 @@ export default function DashboardPage() {
     };
 
     loadDashboardData();
-  }, [latestMessage]);
+  }, [latestMessages]);
 
   // Calculate REAL USD values using API exchange rates
   const totalFiatBalance = balances.reduce((sum, balance) => {
@@ -445,95 +445,134 @@ export default function DashboardPage() {
 
   return (
     <DashboardLayout currentSection="dashboard">
-      <div className="space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
-          <p className="text-gray-600">Welcome back, {user?.name}</p>
+      <div className="min-h-screen bg-gradient-to-br from-orange-50 to-amber-50">
+        {/* Hero Header */}
+        <div className="relative overflow-hidden bg-gradient-to-r from-[#F26623] via-[#E55A1F] to-[#D94E1A] rounded-2xl p-8 mb-8 shadow-2xl">
+          <div className="absolute inset-0 bg-black/10"></div>
+          <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full -translate-y-32 translate-x-32"></div>
+          <div className="absolute bottom-0 left-0 w-48 h-48 bg-white/5 rounded-full translate-y-24 -translate-x-24"></div>
+          <div className="relative z-10">
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <h1 className="text-4xl font-bold text-white mb-2">
+                  Welcome back, {user?.name || "Valued Client"}
+                </h1>
+                <p className="text-orange-100 text-lg font-medium">
+                  Your comprehensive financial dashboard
+                </p>
+              </div>
+              <div className="hidden md:flex items-center space-x-4">
+                <div className="bg-white/20 backdrop-blur-sm rounded-full p-3">
+                  <TrendingUp className="h-8 w-8 text-white" />
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
 
-        {/* Individual Currency Cards */}
-        <div>
-          <h2 className="text-xl font-semibold text-gray-900 mb-4">
-            Primary Currency Balances
-          </h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {/* Currency Accounts Section */}
+        <div className="mb-10">
+          <div className="flex items-center justify-between mb-8">
+            <div>
+              <h2 className="text-3xl font-bold text-gray-900 mb-2">
+                Currency Accounts
+              </h2>
+              <div className="w-24 h-1 bg-gradient-to-r from-[#F26623] to-[#E55A1F] rounded-full"></div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             {["USD", "EUR", "GBP"].map((currency) => {
               const balance = balances.find((b) => b.currency === currency);
               const amount = balance ? Number(balance.amount) : 0;
-              const usdValue = balance
-                ? convertCurrency(
-                    Number(balance.amount),
-                    balance.currency,
-                    "USD"
-                  )
-                : 0;
 
               return (
-                <Card
+                <div
                   key={currency}
-                  className="hover:shadow-md transition-shadow"
+                  className="group relative bg-white rounded-2xl shadow-xl hover:shadow-2xl transition-all duration-500 overflow-hidden border-2 border-[#F26623]/10 hover:border-[#F26623]/30"
                 >
-                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-lg font-medium">
-                      {currency}
-                    </CardTitle>
-                    <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center border-2 border-gray-200 overflow-hidden">
-                      <CurrencyIcon currency={currency} />
+                  <div className="absolute inset-0 bg-gradient-to-br from-[#F26623]/5 to-[#E55A1F]/10"></div>
+                  <div className="absolute top-0 right-0 w-32 h-32 bg-[#F26623]/10 rounded-full -translate-y-16 translate-x-16 group-hover:scale-150 transition-transform duration-700"></div>
+
+                  <div className="relative p-8">
+                    <div className="flex items-center justify-between mb-6">
+                      <div className="bg-gradient-to-br from-[#F26623] to-[#E55A1F] rounded-2xl p-4 shadow-lg">
+                        <CurrencyIcon currency={currency} />
+                      </div>
+                      <div className="text-right">
+                        <h3 className="text-2xl font-bold text-gray-900">
+                          {currency}
+                        </h3>
+                        <p className="text-[#F26623] font-semibold text-sm">
+                          Account
+                        </p>
+                      </div>
                     </div>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-2xl font-bold">
-                      {amount.toLocaleString("en-US", {
-                        minimumFractionDigits: 2,
-                        maximumFractionDigits: 2,
-                      })}
+
+                    <div className="space-y-4">
+                      <div>
+                        <p className="text-4xl font-bold text-gray-900 mb-2">
+                          {amount.toLocaleString("en-US", {
+                            minimumFractionDigits: 2,
+                            maximumFractionDigits: 2,
+                          })}
+                        </p>
+                        <div className="bg-gradient-to-r from-[#F26623] to-[#E55A1F] text-white px-4 py-2 rounded-full inline-block">
+                          <span className="text-sm font-semibold">
+                            ≈ $
+                            {convertCurrency(
+                              amount,
+                              currency,
+                              "USD"
+                            ).toLocaleString("en-US", {
+                              minimumFractionDigits: 2,
+                              maximumFractionDigits: 2,
+                            })}{" "}
+                            USD
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="bg-[#F26623]/5 rounded-xl p-4 border border-[#F26623]/20">
+                        <p className="text-sm text-gray-600 mb-1">
+                          Exchange Rate
+                        </p>
+                        <p className="text-[#F26623] font-bold">
+                          1 {currency} = $
+                          {(1 / getCurrencyRate(currency)).toFixed(6)} USD
+                        </p>
+                      </div>
                     </div>
-                    <p className="text-sm text-gray-600 mt-1">
-                      ≈ $
-                      {convertCurrency(amount, currency, "USD").toLocaleString(
-                        "en-US",
-                        {
-                          minimumFractionDigits: 2,
-                          maximumFractionDigits: 2,
-                        }
-                      )}{" "}
-                      USD
-                    </p>
-                    <p className="text-xs text-gray-400 mt-1">
-                      Rate: 1 {currency} = $
-                      {(1 / getCurrencyRate(currency)).toFixed(6)} USD
-                    </p>
-                    {amount === 0 && (
-                      <p className="text-xs text-amber-600 mt-1 font-medium">
-                        No balance - Add funds in Deposits
-                      </p>
-                    )}
-                  </CardContent>
-                </Card>
+                  </div>
+                </div>
               );
             })}
           </div>
+
           {balances.length > 3 && (
-            <div className="mt-4 text-center">
-              <p className="text-sm text-gray-500">
-                View all {balances.length} currency balances in the{" "}
-                <a
-                  href="/dashboard/balances"
-                  className="text-blue-600 hover:underline font-medium"
-                >
-                  Balances section
-                </a>
-              </p>
+            <div className="mt-8 text-center">
+              <a
+                href="/dashboard/balances"
+                className="inline-flex items-center px-8 py-4 bg-gradient-to-r from-[#F26623] to-[#E55A1F] text-white font-bold rounded-full hover:shadow-xl transition-all duration-300 transform hover:scale-105"
+              >
+                View All {balances.length} Accounts →
+              </a>
             </div>
           )}
         </div>
 
-        {/* Individual Crypto Cards */}
-        <div>
-          <h2 className="text-xl font-semibold text-gray-900 mb-4">
-            Primary Cryptocurrency Holdings
-          </h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {/* Digital Assets Section */}
+        <div className="mb-10">
+          <div className="flex items-center justify-between mb-8">
+            <div>
+              <h2 className="text-3xl font-bold text-gray-900 mb-2">
+                Digital Assets Portfolio
+              </h2>
+              <div className="w-24 h-1 bg-gradient-to-r from-[#F26623] to-[#E55A1F] rounded-full"></div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             {["BTC", "ETH", "USDT"].map((cryptoSymbol) => {
               const crypto = cryptoBalances.find(
                 (c) => c.crypto === cryptoSymbol
@@ -543,213 +582,288 @@ export default function DashboardPage() {
               const usdValue = amount * price;
 
               return (
-                <Card
+                <div
                   key={cryptoSymbol}
-                  className="hover:shadow-md transition-shadow"
+                  className="group relative bg-white rounded-2xl shadow-xl hover:shadow-2xl transition-all duration-500 overflow-hidden border-2 border-[#F26623]/10 hover:border-[#F26623]/30"
                 >
-                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-lg font-medium">
-                      {cryptoSymbol}
-                    </CardTitle>
-                    <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center border-2 border-gray-200 overflow-hidden">
-                      <CryptoIcon crypto={cryptoSymbol} />
+                  <div className="absolute inset-0 bg-gradient-to-br from-[#F26623]/5 to-[#E55A1F]/10"></div>
+                  <div className="absolute top-0 right-0 w-32 h-32 bg-[#F26623]/10 rounded-full -translate-y-16 translate-x-16 group-hover:scale-150 transition-transform duration-700"></div>
+
+                  <div className="relative p-8">
+                    <div className="flex items-center justify-between mb-6">
+                      <div className="bg-gradient-to-br from-[#F26623] to-[#E55A1F] rounded-2xl p-4 shadow-lg">
+                        <CryptoIcon crypto={cryptoSymbol} />
+                      </div>
+                      <div className="text-right">
+                        <h3 className="text-2xl font-bold text-gray-900">
+                          {cryptoSymbol}
+                        </h3>
+                        <p className="text-[#F26623] font-semibold text-sm">
+                          Crypto
+                        </p>
+                      </div>
                     </div>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-2xl font-bold">
-                      {amount.toLocaleString("en-US", {
-                        minimumFractionDigits: 8,
-                        maximumFractionDigits: 8,
-                      })}
+
+                    <div className="space-y-4">
+                      <div>
+                        <p className="text-3xl font-bold text-gray-900 mb-2">
+                          {amount.toLocaleString("en-US", {
+                            minimumFractionDigits: 8,
+                            maximumFractionDigits: 8,
+                          })}
+                        </p>
+                        <div className="bg-gradient-to-r from-[#F26623] to-[#E55A1F] text-white px-4 py-2 rounded-full inline-block">
+                          <span className="text-sm font-semibold">
+                            ≈ $
+                            {usdValue.toLocaleString("en-US", {
+                              minimumFractionDigits: 2,
+                              maximumFractionDigits: 2,
+                            })}{" "}
+                            USD
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="bg-[#F26623]/5 rounded-xl p-4 border border-[#F26623]/20">
+                        <p className="text-sm text-gray-600 mb-1">
+                          Market Price
+                        </p>
+                        <p className="text-[#F26623] font-bold">
+                          $
+                          {getCryptoPrice(cryptoSymbol).toLocaleString(
+                            "en-US",
+                            {
+                              minimumFractionDigits: 2,
+                              maximumFractionDigits: 8,
+                            }
+                          )}{" "}
+                          per {cryptoSymbol}
+                        </p>
+                      </div>
                     </div>
-                    <p className="text-sm text-gray-600 mt-1">
-                      ≈ $
-                      {usdValue.toLocaleString("en-US", {
-                        minimumFractionDigits: 2,
-                        maximumFractionDigits: 8,
-                      })}{" "}
-                      USD
-                    </p>
-                    <p className="text-xs text-gray-400 mt-1">
-                      $
-                      {getCryptoPrice(cryptoSymbol).toLocaleString("en-US", {
-                        minimumFractionDigits: 2,
-                        maximumFractionDigits: 8,
-                      })}{" "}
-                      per {cryptoSymbol}
-                    </p>
-                    {amount === 0 && (
-                      <p className="text-xs text-amber-600 mt-1 font-medium">
-                        No holdings - Add crypto in Admin Panel
-                      </p>
-                    )}
-                  </CardContent>
-                </Card>
+                  </div>
+                </div>
               );
             })}
           </div>
+
           {cryptoBalances.length > 3 && (
-            <div className="mt-4 text-center">
-              <p className="text-sm text-gray-500">
-                View all {cryptoBalances.length} cryptocurrency holdings in the{" "}
-                <a
-                  href="/dashboard/crypto"
-                  className="text-blue-600 hover:underline font-medium"
-                >
-                  Crypto section
-                </a>
-              </p>
+            <div className="mt-8 text-center">
+              <a
+                href="/dashboard/crypto"
+                className="inline-flex items-center px-8 py-4 bg-gradient-to-r from-[#F26623] to-[#E55A1F] text-white font-bold rounded-full hover:shadow-xl transition-all duration-300 transform hover:scale-105"
+              >
+                View All {cryptoBalances.length} Digital Assets →
+              </a>
             </div>
           )}
         </div>
 
-        {/* Messages and Transactions Row */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Latest Message Card */}
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
-              <div className="flex items-center space-x-2">
-                <MessageSquare className="h-5 w-5 text-blue-600" />
-                <CardTitle className="text-lg">Latest Message</CardTitle>
-              </div>
-            </CardHeader>
-            <CardContent>
-              {loading ? (
-                <div className="animate-pulse space-y-3">
-                  <div className="h-4 bg-gray-200 rounded w-3/4"></div>
-                  <div className="h-3 bg-gray-200 rounded w-1/2"></div>
-                </div>
-              ) : latestMessage ? (
-                <div className="space-y-3">
-                  <div className="flex items-start space-x-3">
-                    <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
-                      {latestMessage.from_admin ? (
-                        <Mail className="h-4 w-4 text-blue-600" />
-                      ) : (
-                        <MailOpen className="h-4 w-4 text-gray-600" />
-                      )}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between mb-1">
-                        <p className="text-sm font-medium text-gray-900">
-                          {latestMessage.from_admin ? "Support Team" : "You"}
-                        </p>
-                        <p className="text-xs text-gray-500">
-                          {new Date(
-                            latestMessage.created_at
-                          ).toLocaleDateString()}
-                        </p>
-                      </div>
-                      <p className="text-sm text-gray-700 line-clamp-2">
-                        {latestMessage.message.length > 100
-                          ? `${latestMessage.message.substring(0, 100)}...`
-                          : latestMessage.message}
-                      </p>
-                    </div>
+        {/* Communications & Activity Section */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
+          {/* Communications Card */}
+          <div className="bg-white rounded-2xl shadow-xl overflow-hidden border-2 border-[#F26623]/10">
+            <div className="bg-gradient-to-r from-[#F26623] to-[#E55A1F] p-6">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-4">
+                  <div className="bg-white/20 rounded-full p-3">
+                    <MessageSquare className="h-6 w-6 text-white" />
                   </div>
-                  <div className="flex justify-between items-center pt-2 border-t">
+                  <div>
+                    <h3 className="text-xl font-bold text-white">
+                      Communications
+                    </h3>
+                    <p className="text-orange-100">
+                      Stay connected with support
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="p-8">
+              {loading ? (
+                <div className="animate-pulse space-y-6">
+                  <div className="h-6 bg-[#F26623]/20 rounded-lg w-3/4"></div>
+                  <div className="h-4 bg-[#F26623]/10 rounded w-1/2"></div>
+                </div>
+              ) : latestMessages.length > 0 ? (
+                <div className="space-y-6">
+                  <div className="max-h-96 overflow-y-auto space-y-4">
+                    {latestMessages.map((message, index) => (
+                      <div
+                        key={message.id}
+                        className="flex items-start space-x-4 p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors"
+                      >
+                        <div className="bg-gradient-to-br from-[#F26623] to-[#E55A1F] rounded-full p-2 flex-shrink-0">
+                          {message.from_admin ? (
+                            <Mail className="h-4 w-4 text-white" />
+                          ) : (
+                            <MailOpen className="h-4 w-4 text-white" />
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between mb-2">
+                            <p className="font-bold text-gray-900">
+                              {message.from_admin ? "Support Team" : "You"}
+                            </p>
+                            <div className="bg-[#F26623]/10 text-[#F26623] px-2 py-1 rounded-full text-xs font-semibold">
+                              {new Date(
+                                message.created_at
+                              ).toLocaleDateString()}
+                            </div>
+                          </div>
+                          <p className="text-gray-700 text-sm leading-relaxed">
+                            {message.message.length > 100
+                              ? `${message.message.substring(0, 100)}...`
+                              : message.message}
+                          </p>
+                          {index === 0 && message.from_admin && (
+                            <div className="mt-2">
+                              {!latestMessageRead ? (
+                                <button
+                                  onClick={() => markMessageAsRead(message.id)}
+                                  disabled={markingAsRead}
+                                  className="bg-gradient-to-r from-red-500 to-red-600 text-white px-3 py-1 rounded-full text-xs font-semibold hover:shadow-lg transition-all duration-300 disabled:opacity-50"
+                                >
+                                  {markingAsRead
+                                    ? "Marking..."
+                                    : "Mark as Read"}
+                                </button>
+                              ) : (
+                                <div className="bg-gradient-to-r from-green-500 to-green-600 text-white px-3 py-1 rounded-full text-xs font-semibold inline-block">
+                                  ✓ Read
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="pt-6 border-t-2 border-[#F26623]/10 text-center">
                     <a
                       href="/dashboard/messages"
-                      className="text-sm text-blue-600 hover:text-blue-700 font-medium"
+                      className="text-[#F26623] hover:text-[#E55A1F] font-bold hover:underline transition-colors text-lg"
                     >
-                      View all messages
+                      View All Messages →
                     </a>
-                    <div className="flex items-center space-x-2">
-                      {latestMessage.from_admin && !latestMessageRead ? (
-                        <button
-                          onClick={() => markMessageAsRead(latestMessage.id)}
-                          disabled={markingAsRead}
-                          className="flex items-center space-x-1 px-2 py-1 text-xs bg-red-100 text-red-700 rounded-full hover:bg-red-200 disabled:opacity-50 transition-colors"
-                        >
-                          <Mail className="h-3 w-3" />
-                          <span>
-                            {markingAsRead ? "Marking..." : "Mark as Read"}
-                          </span>
-                        </button>
-                      ) : latestMessage.from_admin && latestMessageRead ? (
-                        <span className="flex items-center space-x-1 px-2 py-1 text-xs bg-green-100 text-green-600 rounded-full">
-                          <MailOpen className="h-3 w-3" />
-                          <span>Read</span>
-                        </span>
-                      ) : (
-                        <span className="flex items-center space-x-1 px-2 py-1 text-xs bg-gray-100 text-gray-600 rounded-full">
-                          <MailOpen className="h-3 w-3" />
-                          <span>Sent</span>
-                        </span>
-                      )}
-                    </div>
                   </div>
                 </div>
               ) : (
-                <div className="text-center py-6">
-                  <MessageSquare className="h-8 w-8 text-gray-400 mx-auto mb-2" />
-                  <p className="text-sm text-gray-500 mb-2">No messages yet</p>
+                <div className="text-center py-12">
+                  <div className="bg-gradient-to-br from-[#F26623]/10 to-[#E55A1F]/20 rounded-full w-24 h-24 flex items-center justify-center mx-auto mb-6">
+                    <MessageSquare className="h-12 w-12 text-[#F26623]" />
+                  </div>
+                  <h4 className="text-xl font-bold text-gray-900 mb-2">
+                    No Messages Yet
+                  </h4>
+                  <p className="text-gray-600 mb-6">
+                    Start a conversation with our support team
+                  </p>
                   <a
                     href="/dashboard/messages"
-                    className="text-sm text-blue-600 hover:text-blue-700 font-medium"
+                    className="inline-flex items-center px-8 py-4 bg-gradient-to-r from-[#F26623] to-[#E55A1F] text-white font-bold rounded-full hover:shadow-xl transition-all duration-300 transform hover:scale-105"
                   >
-                    Start a conversation
+                    Start Conversation
                   </a>
                 </div>
               )}
-            </CardContent>
-          </Card>
+            </div>
+          </div>
 
-          {/* Recent Transactions */}
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
-              <div className="flex items-center space-x-2">
-                <ArrowUpDown className="h-5 w-5 text-green-600" />
-                <CardTitle className="text-lg">Recent Transactions</CardTitle>
+          {/* Recent Activity Card */}
+          <div className="bg-white rounded-2xl shadow-xl overflow-hidden border-2 border-[#F26623]/10">
+            <div className="bg-gradient-to-r from-[#F26623] to-[#E55A1F] p-6">
+              <div className="flex items-center space-x-4">
+                <div className="bg-white/20 rounded-full p-3">
+                  <ArrowUpDown className="h-6 w-6 text-white" />
+                </div>
+                <div>
+                  <h3 className="text-xl font-bold text-white">
+                    Recent Activity
+                  </h3>
+                  <p className="text-orange-100">Your latest transactions</p>
+                </div>
               </div>
-            </CardHeader>
-            <CardContent>
-              <CardDescription>Your latest financial activity</CardDescription>
+            </div>
+
+            <div className="p-8">
               {loading ? (
                 <div className="space-y-4">
                   {[1, 2, 3].map((i) => (
-                    <div key={i} className="animate-pulse flex justify-between">
-                      <div className="h-4 bg-gray-200 rounded w-32"></div>
-                      <div className="h-4 bg-gray-200 rounded w-20"></div>
+                    <div
+                      key={i}
+                      className="animate-pulse bg-[#F26623]/10 rounded-xl p-6"
+                    >
+                      <div className="h-4 bg-[#F26623]/20 rounded w-32 mb-2"></div>
+                      <div className="h-3 bg-[#F26623]/10 rounded w-20"></div>
                     </div>
                   ))}
                 </div>
               ) : recentTransactions.length > 0 ? (
                 <div className="space-y-4">
-                  {recentTransactions.map((transaction) => (
+                  {recentTransactions.map((transaction, index) => (
                     <div
                       key={transaction.id}
-                      className="flex justify-between items-center"
+                      className="bg-gradient-to-r from-[#F26623]/5 to-[#E55A1F]/10 rounded-xl p-6 border-2 border-[#F26623]/10 hover:border-[#F26623]/30 transition-all duration-300 hover:shadow-lg"
                     >
-                      <div>
-                        <p className="text-sm font-medium">
-                          {transaction.type}
-                        </p>
-                        <p className="text-xs text-gray-500">
-                          {new Date(
-                            transaction.created_at
-                          ).toLocaleDateString()}
-                        </p>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-sm font-medium">
-                          {transaction.amount} {transaction.currency}
-                        </p>
-                        <p className="text-xs text-gray-500">
-                          {transaction.type}
-                        </p>
+                      <div className="flex justify-between items-center">
+                        <div className="flex items-center space-x-4">
+                          <div className="bg-gradient-to-br from-[#F26623] to-[#E55A1F] rounded-full w-12 h-12 flex items-center justify-center text-white font-bold">
+                            {index + 1}
+                          </div>
+                          <div>
+                            <p className="font-bold text-gray-900 text-lg">
+                              {transaction.type}
+                            </p>
+                            <div className="bg-[#F26623]/10 text-[#F26623] px-3 py-1 rounded-full text-xs font-semibold inline-block mt-1">
+                              {new Date(
+                                transaction.created_at
+                              ).toLocaleDateString()}
+                            </div>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-2xl font-bold text-gray-900">
+                            {transaction.amount} {transaction.currency}
+                          </p>
+                          <p className="text-[#F26623] font-bold">
+                            {transaction.type}
+                          </p>
+                        </div>
                       </div>
                     </div>
                   ))}
+
+                  <div className="pt-6 border-t-2 border-[#F26623]/10 text-center">
+                    <a
+                      href="/dashboard/transactions"
+                      className="inline-flex items-center px-8 py-4 bg-gradient-to-r from-[#F26623] to-[#E55A1F] text-white font-bold rounded-full hover:shadow-xl transition-all duration-300 transform hover:scale-105"
+                    >
+                      View All Transactions →
+                    </a>
+                  </div>
                 </div>
               ) : (
-                <div className="text-center py-6">
-                  <ArrowUpDown className="h-8 w-8 text-gray-400 mx-auto mb-2" />
-                  <p className="text-sm text-gray-500">No transactions yet</p>
+                <div className="text-center py-12">
+                  <div className="bg-gradient-to-br from-[#F26623]/10 to-[#E55A1F]/20 rounded-full w-24 h-24 flex items-center justify-center mx-auto mb-6">
+                    <ArrowUpDown className="h-12 w-12 text-[#F26623]" />
+                  </div>
+                  <h4 className="text-xl font-bold text-gray-900 mb-2">
+                    No Transactions Yet
+                  </h4>
+                  <p className="text-gray-600 mb-2">
+                    Your transaction history will appear here
+                  </p>
+                  <p className="text-[#F26623] font-semibold">
+                    Ready to get started?
+                  </p>
                 </div>
               )}
-            </CardContent>
-          </Card>
+            </div>
+          </div>
         </div>
       </div>
     </DashboardLayout>
