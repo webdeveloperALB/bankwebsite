@@ -1,303 +1,273 @@
-'use client'
+"use client";
 
-import { useEffect, useState } from 'react'
-import { supabase } from '@/lib/supabase'
-import { getCurrentUser } from '@/lib/auth'
-import DashboardLayout from '@/components/dashboard-layout'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Textarea } from '@/components/ui/textarea'
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
-import { Badge } from '@/components/ui/badge'
-import { HelpCircle, Plus, Clock, CheckCircle, AlertCircle } from 'lucide-react'
-import { Database } from '@/lib/supabase'
+import { useEffect, useState } from "react";
+import { getCurrentUser } from "@/lib/auth";
+import DashboardLayout from "@/components/dashboard-layout";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Phone,
+  Mail,
+  MessageCircle,
+  Clock,
+  Shield,
+  CreditCard,
+  Users,
+  HelpCircle,
+} from "lucide-react";
+import { Database } from "@/lib/supabase";
 
-type User = Database['public']['Tables']['users']['Row']
-type SupportTicket = Database['public']['Tables']['support_tickets']['Row']
+type User = Database["public"]["Tables"]["users"]["Row"];
 
 export default function SupportPage() {
-  const [user, setUser] = useState<User | null>(null)
-  const [tickets, setTickets] = useState<SupportTicket[]>([])
-  const [loading, setLoading] = useState(true)
-  const [creating, setCreating] = useState(false)
-  const [dialogOpen, setDialogOpen] = useState(false)
-  const [newIssue, setNewIssue] = useState('')
+  const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const loadData = async () => {
       try {
-        const currentUser = await getCurrentUser()
-        if (!currentUser) return
-
-        setUser(currentUser)
-
-        // Load support tickets
-        const { data: ticketsData } = await supabase
-          .from('support_tickets')
-          .select('*')
-          .eq('user_id', currentUser.id)
-          .order('created_at', { ascending: false })
-
-        setTickets(ticketsData || [])
-
-        // Set up real-time subscription
-        const channel = supabase
-          .channel('support_tickets')
-          .on('postgres_changes', 
-            { event: '*', schema: 'public', table: 'support_tickets', filter: `user_id=eq.${currentUser.id}` },
-            () => {
-              // Reload tickets
-              supabase
-                .from('support_tickets')
-                .select('*')
-                .eq('user_id', currentUser.id)
-                .order('created_at', { ascending: false })
-                .then(({ data }) => setTickets(data || []))
-            }
-          )
-          .subscribe()
-
-        return () => {
-          supabase.removeChannel(channel)
+        const currentUser = await getCurrentUser();
+        if (currentUser) {
+          setUser(currentUser);
         }
-
       } catch (error) {
-        console.error('Error loading support tickets:', error)
+        console.error("Error loading user:", error);
       } finally {
-        setLoading(false)
+        setLoading(false);
       }
-    }
+    };
 
-    loadData()
-  }, [])
+    loadData();
+  }, []);
 
-  const handleCreateTicket = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!user || !newIssue.trim()) return
+  const supportOptions = [
+    {
+      icon: Phone,
+      title: "Phone Support",
+      description: "Speak directly with our banking specialists",
+      contact: "1-800-BANK-HELP",
+      hours: "24/7 Available",
+      color: "text-[#F26623]",
+    },
+    {
+      icon: Mail,
+      title: "Email Support",
+      description: "Send us your questions and we'll respond within 24 hours",
+      contact: "support@yourbank.com",
+      hours: "Response within 24hrs",
+      color: "text-[#F26623]",
+    },
+    {
+      icon: MessageCircle,
+      title: "Live Chat",
+      description: "Get instant help through our secure chat system",
+      contact: "Start Chat",
+      hours: "Mon-Fri 8AM-8PM",
+      color: "text-[#F26623]",
+    },
+  ];
 
-    setCreating(true)
-
-    try {
-      const { error } = await supabase
-        .from('support_tickets')
-        .insert({
-          user_id: user.id,
-          issue: newIssue.trim(),
-          status: 'open'
-        })
-
-      if (error) throw error
-
-      // Log activity
-      await supabase
-        .from('activity_logs')
-        .insert({
-          user_id: user.id,
-          activity: 'Created support ticket'
-        })
-
-      setNewIssue('')
-      setDialogOpen(false)
-    } catch (error) {
-      console.error('Error creating ticket:', error)
-      alert('Failed to create ticket. Please try again.')
-    } finally {
-      setCreating(false)
-    }
-  }
-
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case 'open':
-        return <Clock className="h-4 w-4" />
-      case 'closed':
-        return <CheckCircle className="h-4 w-4" />
-      case 'in_progress':
-        return <AlertCircle className="h-4 w-4" />
-      default:
-        return <HelpCircle className="h-4 w-4" />
-    }
-  }
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'open':
-        return 'bg-yellow-100 text-yellow-800'
-      case 'closed':
-        return 'bg-green-100 text-green-800'
-      case 'in_progress':
-        return 'bg-blue-100 text-blue-800'
-      default:
-        return 'bg-gray-100 text-gray-800'
-    }
-  }
+  const quickHelp = [
+    {
+      icon: CreditCard,
+      title: "Account & Cards",
+      description: "Balance inquiries, card activation, transaction disputes",
+    },
+    {
+      icon: Shield,
+      title: "Security & Fraud",
+      description:
+        "Report suspicious activity, security alerts, account protection",
+    },
+    {
+      icon: Users,
+      title: "Loans & Mortgages",
+      description:
+        "Application status, payment information, refinancing options",
+    },
+    {
+      icon: HelpCircle,
+      title: "General Banking",
+      description: "Branch locations, fees, services, and general questions",
+    },
+  ];
 
   return (
     <DashboardLayout currentSection="support">
-      <div className="space-y-6">
-        <div className="flex justify-between items-center">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900">Support</h1>
-            <p className="text-gray-600">Get help with your banking needs</p>
-          </div>
-          
-          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-            <DialogTrigger asChild>
-              <Button>
-                <Plus className="h-4 w-4 mr-2" />
-                New Ticket
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Create Support Ticket</DialogTitle>
-                <DialogDescription>
-                  Describe your issue and our support team will help you
-                </DialogDescription>
-              </DialogHeader>
-              <form onSubmit={handleCreateTicket} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="issue">Issue Description</Label>
-                  <Textarea
-                    id="issue"
-                    value={newIssue}
-                    onChange={(e) => setNewIssue(e.target.value)}
-                    placeholder="Please describe your issue in detail..."
-                    rows={4}
-                    required
-                  />
+      <div className="space-y-6 md:space-y-8">
+        {/* Header */}
+        <div className="text-center md:text-left">
+          <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold text-gray-900 mb-2">
+            Customer Support
+          </h1>
+          <p className="text-sm md:text-base text-gray-600 max-w-2xl">
+            We&apos;re here to help you with all your banking needs. Choose the
+            support option that works best for you.
+          </p>
+        </div>
+
+        {/* Contact Methods */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
+          {supportOptions.map((option, index) => (
+            <Card
+              key={index}
+              className="hover:shadow-lg transition-shadow duration-200 border-l-4 border-l-[#F26623]"
+            >
+              <CardHeader className="pb-3">
+                <div className="flex items-center space-x-3">
+                  <div className="p-2 bg-[#F26623]/10 rounded-lg">
+                    <option.icon
+                      className={`h-5 w-5 md:h-6 md:w-6 ${option.color}`}
+                    />
+                  </div>
+                  <div>
+                    <CardTitle className="text-base md:text-lg text-gray-900">
+                      {option.title}
+                    </CardTitle>
+                  </div>
                 </div>
-                <Button type="submit" className="w-full" disabled={creating}>
-                  {creating ? 'Creating...' : 'Create Ticket'}
+              </CardHeader>
+              <CardContent className="pt-0">
+                <p className="text-xs md:text-sm text-gray-600 mb-3 leading-relaxed">
+                  {option.description}
+                </p>
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm md:text-base font-semibold text-[#F26623]">
+                      {option.contact}
+                    </span>
+                  </div>
+                  <div className="flex items-center text-xs md:text-sm text-gray-500">
+                    <Clock className="h-3 w-3 md:h-4 md:w-4 mr-1" />
+                    {option.hours}
+                  </div>
+                </div>
+                <Button
+                  className="w-full mt-4 bg-[#F26623] hover:bg-[#E55A1F] text-white text-sm md:text-base"
+                  size="sm"
+                >
+                  Contact Now
                 </Button>
-              </form>
-            </DialogContent>
-          </Dialog>
+              </CardContent>
+            </Card>
+          ))}
         </div>
 
-        {/* Support Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Tickets</CardTitle>
-              <HelpCircle className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{tickets.length}</div>
-              <p className="text-xs text-muted-foreground">
-                All time
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Open</CardTitle>
-              <Clock className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">
-                {tickets.filter(t => t.status === 'open').length}
-              </div>
-              <p className="text-xs text-muted-foreground">
-                Awaiting response
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">In Progress</CardTitle>
-              <AlertCircle className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">
-                {tickets.filter(t => t.status === 'in_progress').length}
-              </div>
-              <p className="text-xs text-muted-foreground">
-                Being worked on
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Resolved</CardTitle>
-              <CheckCircle className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">
-                {tickets.filter(t => t.status === 'closed').length}
-              </div>
-              <p className="text-xs text-muted-foreground">
-                Completed tickets
-              </p>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Support Tickets */}
+        {/* Quick Help Categories */}
         <Card>
           <CardHeader>
-            <CardTitle>Your Support Tickets</CardTitle>
-            <CardDescription>
-              Track the status of your support requests
+            <CardTitle className="text-lg md:text-xl text-gray-900">
+              Quick Help Categories
+            </CardTitle>
+            <CardDescription className="text-sm md:text-base">
+              Find answers to common questions in these categories
             </CardDescription>
           </CardHeader>
           <CardContent>
-            {loading ? (
-              <div className="space-y-4">
-                {[1, 2, 3].map((i) => (
-                  <div key={i} className="animate-pulse p-4 border rounded-lg">
-                    <div className="flex justify-between items-start mb-2">
-                      <div className="h-4 bg-gray-200 rounded w-3/4"></div>
-                      <div className="h-6 bg-gray-200 rounded w-16"></div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
+              {quickHelp.map((item, index) => (
+                <div
+                  key={index}
+                  className="p-4 border rounded-lg hover:bg-gray-50 transition-colors cursor-pointer group"
+                >
+                  <div className="flex items-start space-x-3">
+                    <div className="p-2 bg-[#F26623]/10 rounded-lg group-hover:bg-[#F26623]/20 transition-colors">
+                      <item.icon className="h-5 w-5 md:h-6 md:w-6 text-[#F26623]" />
                     </div>
-                    <div className="h-3 bg-gray-200 rounded w-1/2"></div>
-                  </div>
-                ))}
-              </div>
-            ) : tickets.length > 0 ? (
-              <div className="space-y-4">
-                {tickets.map((ticket) => (
-                  <div key={ticket.id} className="p-4 border rounded-lg hover:bg-gray-50 transition-colors">
-                    <div className="flex justify-between items-start mb-2">
-                      <h3 className="font-medium text-gray-900 flex-1 mr-4">
-                        {ticket.issue.length > 100 
-                          ? `${ticket.issue.substring(0, 100)}...` 
-                          : ticket.issue
-                        }
+                    <div className="flex-1">
+                      <h3 className="text-sm md:text-base font-semibold text-gray-900 mb-1">
+                        {item.title}
                       </h3>
-                      <Badge className={`${getStatusColor(ticket.status)} flex items-center space-x-1`}>
-                        {getStatusIcon(ticket.status)}
-                        <span className="capitalize">{ticket.status.replace('_', ' ')}</span>
-                      </Badge>
-                    </div>
-                    <div className="flex justify-between items-center text-sm text-gray-500">
-                      <span>Created {new Date(ticket.created_at).toLocaleDateString()}</span>
-                      <span>#{ticket.id.substring(0, 8)}</span>
+                      <p className="text-xs md:text-sm text-gray-600 leading-relaxed">
+                        {item.description}
+                      </p>
                     </div>
                   </div>
-                ))}
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Contact Form */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg md:text-xl text-gray-900">
+              Send us a Message
+            </CardTitle>
+            <CardDescription className="text-sm md:text-base">
+              Can&apos;t find what you&apos;re looking for? Send us a detailed message and
+              we&apos;ll get back to you.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form className="space-y-4 md:space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="name" className="text-sm md:text-base">
+                    Full Name
+                  </Label>
+                  <Input
+                    id="name"
+                    placeholder="Enter your full name"
+                    className="text-sm md:text-base"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="email" className="text-sm md:text-base">
+                    Email Address
+                  </Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    placeholder="Enter your email"
+                    className="text-sm md:text-base"
+                  />
+                </div>
               </div>
-            ) : (
-              <div className="text-center py-12">
-                <HelpCircle className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                <h3 className="text-lg font-medium text-gray-900 mb-2">No support tickets yet</h3>
-                <p className="text-gray-500 mb-4">
-                  Create a ticket if you need help with anything
-                </p>
-                <Button onClick={() => setDialogOpen(true)}>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Create Ticket
-                </Button>
+
+              <div className="space-y-2">
+                <Label htmlFor="subject" className="text-sm md:text-base">
+                  Subject
+                </Label>
+                <Input
+                  id="subject"
+                  placeholder="Brief description of your inquiry"
+                  className="text-sm md:text-base"
+                />
               </div>
-            )}
+
+              <div className="space-y-2">
+                <Label htmlFor="message" className="text-sm md:text-base">
+                  Message
+                </Label>
+                <Textarea
+                  id="message"
+                  placeholder="Please provide detailed information about your inquiry..."
+                  rows={4}
+                  className="text-sm md:text-base resize-none"
+                />
+              </div>
+
+              <Button
+                type="submit"
+                className="w-full md:w-auto bg-[#F26623] hover:bg-[#E55A1F] text-white text-sm md:text-base px-8"
+              >
+                Send Message
+              </Button>
+            </form>
           </CardContent>
         </Card>
       </div>
     </DashboardLayout>
-  )
+  );
 }

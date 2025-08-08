@@ -196,8 +196,12 @@ export default function DepositsPage() {
     <DashboardLayout currentSection="deposits">
       <div className="space-y-6">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Deposits</h1>
-          <p className="text-gray-600">Add funds to your account</p>
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">
+            Deposits
+          </h1>
+          <p className="text-sm sm:text-base text-gray-600">
+            Add funds to your account
+          </p>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -205,8 +209,10 @@ export default function DepositsPage() {
           {balances.length > 0 && (
             <Card>
               <CardHeader>
-                <CardTitle>Current Balances</CardTitle>
-                <CardDescription>
+                <CardTitle className="text-lg sm:text-xl">
+                  Current Balances
+                </CardTitle>
+                <CardDescription className="text-sm sm:text-base">
                   Your available funds by currency
                 </CardDescription>
               </CardHeader>
@@ -215,26 +221,30 @@ export default function DepositsPage() {
                   {balances.map((balance) => (
                     <div
                       key={balance.id}
-                      className="flex justify-between items-center p-3 border rounded-lg"
+                      className="flex justify-between items-center p-3 border border-orange-100 rounded-lg bg-gradient-to-r from-orange-50 to-white"
                     >
                       <div className="flex items-center space-x-3">
-                        <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-                          <span className="text-blue-600 font-semibold text-sm">
+                        <div className="w-8 h-8 bg-[#F26623] bg-opacity-10 rounded-full flex items-center justify-center">
+                          <span className="text-[#F26623] font-semibold text-xs sm:text-sm">
                             {balance.currency.substring(0, 2)}
                           </span>
                         </div>
                         <div>
-                          <p className="font-medium">{balance.currency}</p>
-                          <p className="text-sm text-gray-500">Available</p>
+                          <p className="font-medium text-sm sm:text-base">
+                            {balance.currency}
+                          </p>
+                          <p className="text-xs sm:text-sm text-gray-500">
+                            Available
+                          </p>
                         </div>
                       </div>
                       <div className="text-right">
-                        <p className="font-semibold">
+                        <p className="font-semibold text-sm sm:text-base">
                           {Number(balance.amount).toLocaleString("en-US", {
                             minimumFractionDigits: 2,
                           })}
                         </p>
-                        <p className="text-sm text-gray-500">
+                        <p className="text-xs sm:text-sm text-gray-500">
                           ≈ $
                           {convertCurrency(
                             Number(balance.amount),
@@ -251,22 +261,29 @@ export default function DepositsPage() {
           )}
 
           {/* Deposit Form */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Make a Deposit</CardTitle>
-              <CardDescription>
+          <Card className="border-orange-100">
+            <CardHeader className="bg-gradient-to-r from-[#F26623] to-orange-600 text-white rounded-t-lg">
+              <CardTitle className="text-lg sm:text-xl">
+                Make a Deposit
+              </CardTitle>
+              <CardDescription className="text-orange-100 text-sm sm:text-base">
                 Add funds to your account in any supported currency
               </CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="pt-6">
               <form onSubmit={handleDeposit} className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="currency">Currency</Label>
+                  <Label
+                    htmlFor="currency"
+                    className="text-sm sm:text-base font-medium"
+                  >
+                    Currency
+                  </Label>
                   <Select
                     value={depositCurrency}
                     onValueChange={setDepositCurrency}
                   >
-                    <SelectTrigger>
+                    <SelectTrigger className="border-orange-200 focus:border-[#F26623] focus:ring-[#F26623]">
                       <SelectValue placeholder="Select currency" />
                     </SelectTrigger>
                     <SelectContent>
@@ -280,7 +297,12 @@ export default function DepositsPage() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="amount">Amount</Label>
+                  <Label
+                    htmlFor="amount"
+                    className="text-sm sm:text-base font-medium"
+                  >
+                    Amount
+                  </Label>
                   <Input
                     id="amount"
                     type="number"
@@ -290,23 +312,27 @@ export default function DepositsPage() {
                     onChange={(e) => setDepositAmount(e.target.value)}
                     placeholder="0.00"
                     required
+                    className="border-orange-200 focus:border-[#F26623] focus:ring-[#F26623]"
                   />
                 </div>
 
-                <div className="p-4 bg-blue-50 rounded-lg">
+                <div className="p-4 bg-orange-50 border border-orange-200 rounded-lg">
                   <div className="flex items-center space-x-2 mb-2">
-                    <CreditCard className="h-4 w-4 text-blue-600" />
-                    <span className="text-sm font-medium text-blue-900">
+                    <CreditCard className="h-4 w-4 text-[#F26623]" />
+                    <span className="text-xs sm:text-sm font-medium text-orange-900">
                       Payment Method
                     </span>
                   </div>
-                  <p className="text-sm text-blue-700">
-                    Deposits are processed instantly. In a real banking app,
-                    this would integrate with payment processors like Stripe.
+                  <p className="text-xs sm:text-sm text-orange-700">
+                    Deposits are processed instantly.
                   </p>
                 </div>
 
-                <Button type="submit" className="w-full" disabled={depositing}>
+                <Button
+                  type="submit"
+                  className="w-full bg-[#F26623] hover:bg-orange-700 text-white font-medium"
+                  disabled={depositing}
+                >
                   {depositing ? "Processing..." : "Deposit Funds"}
                 </Button>
               </form>
@@ -314,10 +340,14 @@ export default function DepositsPage() {
           </Card>
 
           {/* Deposit History */}
-          <Card>
+          <Card className="border-orange-100">
             <CardHeader>
-              <CardTitle>Recent Deposits</CardTitle>
-              <CardDescription>Your deposit history</CardDescription>
+              <CardTitle className="text-lg sm:text-xl">
+                Recent Deposits
+              </CardTitle>
+              <CardDescription className="text-sm sm:text-base">
+                Your deposit history
+              </CardDescription>
             </CardHeader>
             <CardContent>
               {loading ? (
@@ -340,22 +370,22 @@ export default function DepositsPage() {
                   {deposits.map((deposit) => (
                     <div
                       key={deposit.id}
-                      className="flex justify-between items-center p-3 border rounded-lg hover:bg-gray-50 transition-colors"
+                      className="flex justify-between items-center p-3 border border-orange-100 rounded-lg hover:bg-orange-50 transition-colors"
                     >
                       <div>
-                        <p className="font-medium text-green-600">
+                        <p className="font-medium text-[#F26623] text-sm sm:text-base">
                           +
                           {Number(deposit.amount).toLocaleString("en-US", {
                             minimumFractionDigits: 2,
                           })}{" "}
                           {deposit.currency}
                         </p>
-                        <p className="text-sm text-gray-500">
+                        <p className="text-xs sm:text-sm text-gray-500">
                           {new Date(deposit.created_at).toLocaleString()}
                         </p>
                       </div>
-                      <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
-                        <PiggyBank className="h-4 w-4 text-green-600" />
+                      <div className="w-8 h-8 bg-[#F26623] bg-opacity-10 rounded-full flex items-center justify-center">
+                        <PiggyBank className="h-4 w-4 text-[#F26623]" />
                       </div>
                     </div>
                   ))}
@@ -363,10 +393,10 @@ export default function DepositsPage() {
               ) : (
                 <div className="text-center py-8">
                   <PiggyBank className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                  <h3 className="text-lg font-medium text-gray-900 mb-2">
+                  <h3 className="text-base sm:text-lg font-medium text-gray-900 mb-2">
                     No deposits yet
                   </h3>
-                  <p className="text-gray-500">
+                  <p className="text-sm sm:text-base text-gray-500">
                     Make your first deposit to get started
                   </p>
                 </div>

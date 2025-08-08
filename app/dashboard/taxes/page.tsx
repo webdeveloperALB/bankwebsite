@@ -221,7 +221,7 @@ export default function TaxesPage() {
       case "filed":
         return <CheckCircle className="h-4 w-4 text-green-600" />;
       case "paid":
-        return <CheckCircle className="h-4 w-4 text-blue-600" />;
+        return <CheckCircle className="h-4 w-4 text-[#F26623]" />;
       case "overdue":
         return <AlertTriangle className="h-4 w-4 text-red-600" />;
       default:
@@ -236,7 +236,7 @@ export default function TaxesPage() {
       case "filed":
         return "bg-green-50 text-green-700 border-green-200";
       case "paid":
-        return "bg-blue-50 text-blue-700 border-blue-200";
+        return "bg-orange-50 text-[#F26623] border-orange-200";
       case "overdue":
         return "bg-red-50 text-red-700 border-red-200";
       default:
@@ -272,32 +272,32 @@ export default function TaxesPage() {
         {/* Header */}
         <div className="flex items-center justify-between">
           <div className="space-y-1">
-            <h1 className="text-3xl font-bold tracking-tight text-gray-900">
+            <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-gray-900">
               Tax Center
             </h1>
-            <p className="text-lg text-gray-600">
+            <p className="text-base md:text-lg text-gray-600">
               Comprehensive tax management and reporting
             </p>
           </div>
-          <div className="flex items-center space-x-2 text-sm text-gray-500">
+          <div className="flex items-center space-x-2 text-xs md:text-sm text-gray-500">
             <Building2 className="h-4 w-4" />
-            <span>SecureBank Tax Services</span>
+            <span className="hidden sm:inline">Tax Services</span>
           </div>
         </div>
 
         {/* Tax Overview Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <Card className="border-l-4 border-l-blue-500">
+          <Card className="border-l-4 border-l-[#F26623] shadow-sm hover:shadow-md transition-shadow">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
-              <CardTitle className="text-sm font-medium text-gray-600">
+              <CardTitle className="text-xs md:text-sm font-medium text-gray-600">
                 Current Year
               </CardTitle>
-              <div className="h-8 w-8 bg-blue-100 rounded-full flex items-center justify-center">
-                <Calendar className="h-4 w-4 text-blue-600" />
+              <div className="h-8 w-8 bg-orange-100 rounded-full flex items-center justify-center">
+                <Calendar className="h-4 w-4 text-[#F26623]" />
               </div>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-gray-900">
+              <div className="text-xl md:text-2xl font-bold text-gray-900">
                 $
                 {currentYearTax
                   ? Number(currentYearTax.amount).toLocaleString("en-US", {
@@ -313,7 +313,7 @@ export default function TaxesPage() {
                   className={`mt-2 ${getStatusColor(currentYearTax.status)}`}
                 >
                   {getStatusIcon(currentYearTax.status)}
-                  <span className="ml-1 capitalize">
+                  <span className="ml-1 capitalize text-xs">
                     {currentYearTax.status}
                   </span>
                 </Badge>
@@ -321,9 +321,9 @@ export default function TaxesPage() {
             </CardContent>
           </Card>
 
-          <Card className="border-l-4 border-l-green-500">
+          <Card className="border-l-4 border-l-green-500 shadow-sm hover:shadow-md transition-shadow">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
-              <CardTitle className="text-sm font-medium text-gray-600">
+              <CardTitle className="text-xs md:text-sm font-medium text-gray-600">
                 Total Tax History
               </CardTitle>
               <div className="h-8 w-8 bg-green-100 rounded-full flex items-center justify-center">
@@ -331,7 +331,7 @@ export default function TaxesPage() {
               </div>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-gray-900">
+              <div className="text-xl md:text-2xl font-bold text-gray-900">
                 $
                 {totalTaxes.toLocaleString("en-US", {
                   minimumFractionDigits: 2,
@@ -341,9 +341,9 @@ export default function TaxesPage() {
             </CardContent>
           </Card>
 
-          <Card className="border-l-4 border-l-amber-500">
+          <Card className="border-l-4 border-l-amber-500 shadow-sm hover:shadow-md transition-shadow">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
-              <CardTitle className="text-sm font-medium text-gray-600">
+              <CardTitle className="text-xs md:text-sm font-medium text-gray-600">
                 Pending Items
               </CardTitle>
               <div className="h-8 w-8 bg-amber-100 rounded-full flex items-center justify-center">
@@ -351,24 +351,24 @@ export default function TaxesPage() {
               </div>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-gray-900">
+              <div className="text-xl md:text-2xl font-bold text-gray-900">
                 {pendingTaxes}
               </div>
               <p className="text-xs text-gray-500 mt-1">Require attention</p>
             </CardContent>
           </Card>
 
-          <Card className="border-l-4 border-l-purple-500">
+          <Card className="border-l-4 border-l-[#F26623] shadow-sm hover:shadow-md transition-shadow">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
-              <CardTitle className="text-sm font-medium text-gray-600">
+              <CardTitle className="text-xs md:text-sm font-medium text-gray-600">
                 Completed
               </CardTitle>
-              <div className="h-8 w-8 bg-purple-100 rounded-full flex items-center justify-center">
-                <TrendingUp className="h-4 w-4 text-purple-600" />
+              <div className="h-8 w-8 bg-orange-100 rounded-full flex items-center justify-center">
+                <TrendingUp className="h-4 w-4 text-[#F26623]" />
               </div>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-gray-900">
+              <div className="text-xl md:text-2xl font-bold text-gray-900">
                 {completedTaxes}
               </div>
               <p className="text-xs text-gray-500 mt-1">Filed or paid</p>
@@ -377,18 +377,18 @@ export default function TaxesPage() {
         </div>
 
         {/* Tax Records */}
-        <Card className="shadow-sm">
-          <CardHeader className="bg-gradient-to-r from-gray-50 to-gray-100 rounded-t-lg">
+        <Card className="shadow-sm border-gray-200">
+          <CardHeader className="bg-gradient-to-r from-orange-50 to-orange-100 rounded-t-lg border-b border-orange-200">
             <div className="flex items-center justify-between">
               <div>
-                <CardTitle className="text-xl font-semibold text-gray-900">
+                <CardTitle className="text-lg md:text-xl font-semibold text-gray-900">
                   Tax Records
                 </CardTitle>
-                <CardDescription className="text-gray-600 mt-1">
+                <CardDescription className="text-gray-600 mt-1 text-sm md:text-base">
                   Annual tax statements and documentation
                 </CardDescription>
               </div>
-              <Receipt className="h-6 w-6 text-gray-400" />
+              <Receipt className="h-5 md:h-6 w-5 md:w-6 text-[#F26623]" />
             </div>
           </CardHeader>
           <CardContent className="p-0">
@@ -416,19 +416,19 @@ export default function TaxesPage() {
                 {taxes.map((tax, index) => (
                   <div
                     key={tax.id}
-                    className="p-6 hover:bg-gray-50 transition-colors duration-150"
+                    className="p-4 md:p-6 hover:bg-gray-50 transition-colors duration-150"
                   >
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-4">
-                        <div className="h-12 w-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg flex items-center justify-center">
-                          <FileText className="h-6 w-6 text-white" />
+                    <div className="flex flex-col md:flex-row md:items-center justify-between space-y-4 md:space-y-0">
+                      <div className="flex items-center space-x-3 md:space-x-4">
+                        <div className="h-10 w-10 md:h-12 md:w-12 bg-gradient-to-br from-[#F26623] to-orange-600 rounded-lg flex items-center justify-center">
+                          <FileText className="h-5 w-5 md:h-6 md:w-6 text-white" />
                         </div>
                         <div>
-                          <h3 className="text-lg font-semibold text-gray-900">
+                          <h3 className="text-base md:text-lg font-semibold text-gray-900">
                             Tax Year {tax.year}
                           </h3>
-                          <div className="flex items-center space-x-4 mt-1">
-                            <p className="text-sm text-gray-500">
+                          <div className="flex flex-col md:flex-row md:items-center md:space-x-4 mt-1 space-y-1 md:space-y-0">
+                            <p className="text-xs md:text-sm text-gray-500">
                               Filed:{" "}
                               {new Date(tax.created_at).toLocaleDateString(
                                 "en-US",
@@ -439,28 +439,35 @@ export default function TaxesPage() {
                                 }
                               )}
                             </p>
-                            <Separator orientation="vertical" className="h-4" />
-                            <p className="text-sm text-gray-500">
+                            <Separator
+                              orientation="vertical"
+                              className="h-4 hidden md:block"
+                            />
+                            <p className="text-xs md:text-sm text-gray-500">
                               ID: #{tax.id.substring(0, 8).toUpperCase()}
                             </p>
                           </div>
                         </div>
                       </div>
 
-                      <div className="flex items-center space-x-6">
-                        <div className="text-right">
-                          <p className="text-2xl font-bold text-gray-900">
+                      <div className="flex flex-col md:flex-row md:items-center space-y-3 md:space-y-0 md:space-x-6">
+                        <div className="text-left md:text-right">
+                          <p className="text-xl md:text-2xl font-bold text-gray-900">
                             $
                             {Number(tax.amount).toLocaleString("en-US", {
                               minimumFractionDigits: 2,
                             })}
                           </p>
-                          <p className="text-sm text-gray-500">Tax Amount</p>
+                          <p className="text-xs md:text-sm text-gray-500">
+                            Tax Amount
+                          </p>
                         </div>
 
-                        <div className="flex items-center space-x-3">
+                        <div className="flex flex-col md:flex-row items-start md:items-center space-y-2 md:space-y-0 md:space-x-3">
                           <Badge
-                            className={`${getStatusColor(tax.status)} border`}
+                            className={`${getStatusColor(
+                              tax.status
+                            )} border text-xs`}
                           >
                             {getStatusIcon(tax.status)}
                             <span className="ml-1 capitalize font-medium">
@@ -471,9 +478,9 @@ export default function TaxesPage() {
                           <Button
                             variant="outline"
                             size="sm"
-                            className="hover:bg-blue-50 hover:border-blue-300"
+                            className="hover:bg-orange-50 hover:border-[#F26623] hover:text-[#F26623] text-xs md:text-sm"
                           >
-                            <Download className="h-4 w-4 mr-2" />
+                            <Download className="h-3 w-3 md:h-4 md:w-4 mr-2" />
                             Download
                           </Button>
                         </div>
@@ -483,14 +490,14 @@ export default function TaxesPage() {
                 ))}
               </div>
             ) : (
-              <div className="p-12 text-center">
-                <div className="h-16 w-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <FileText className="h-8 w-8 text-gray-400" />
+              <div className="p-8 md:p-12 text-center">
+                <div className="h-12 w-12 md:h-16 md:w-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <FileText className="h-6 w-6 md:h-8 md:w-8 text-gray-400" />
                 </div>
-                <h3 className="text-lg font-medium text-gray-900 mb-2">
+                <h3 className="text-base md:text-lg font-medium text-gray-900 mb-2">
                   No Tax Records Available
                 </h3>
-                <p className="text-gray-500 max-w-md mx-auto">
+                <p className="text-sm md:text-base text-gray-500 max-w-md mx-auto">
                   Tax records are created and managed by our tax administration
                   team. You will be notified when new tax documents are
                   available.
@@ -502,54 +509,56 @@ export default function TaxesPage() {
 
         {/* Tax Information Panel */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <Card className="border-blue-200 bg-blue-50/50">
+          <Card className="border-[#F26623] bg-orange-50/50 shadow-sm">
             <CardHeader>
               <div className="flex items-center space-x-2">
-                <Info className="h-5 w-5 text-blue-600" />
-                <CardTitle className="text-blue-900">
+                <Info className="h-4 md:h-5 w-4 md:w-5 text-[#F26623]" />
+                <CardTitle className="text-[#F26623] text-base md:text-lg">
                   Tax Calculation Method
                 </CardTitle>
               </div>
             </CardHeader>
             <CardContent className="space-y-3">
-              <div className="flex justify-between items-center py-2 border-b border-blue-200">
-                <span className="text-sm font-medium text-blue-800">
+              <div className="flex justify-between items-center py-2 border-b border-orange-200">
+                <span className="text-xs md:text-sm font-medium text-orange-800">
                   Tax Rate
                 </span>
-                <span className="text-sm text-blue-700">
+                <span className="text-xs md:text-sm text-orange-700">
                   15% on transaction volume
                 </span>
               </div>
-              <div className="flex justify-between items-center py-2 border-b border-blue-200">
-                <span className="text-sm font-medium text-blue-800">
+              <div className="flex justify-between items-center py-2 border-b border-orange-200">
+                <span className="text-xs md:text-sm font-medium text-orange-800">
                   Filing Deadline
                 </span>
-                <span className="text-sm text-blue-700">
+                <span className="text-xs md:text-sm text-orange-700">
                   April 15th annually
                 </span>
               </div>
               <div className="flex justify-between items-center py-2">
-                <span className="text-sm font-medium text-blue-800">
+                <span className="text-xs md:text-sm font-medium text-orange-800">
                   Processing Time
                 </span>
-                <span className="text-sm text-blue-700">2-3 business days</span>
+                <span className="text-xs md:text-sm text-orange-700">
+                  2-3 business days
+                </span>
               </div>
             </CardContent>
           </Card>
 
-          <Card className="border-amber-200 bg-amber-50/50">
+          <Card className="border-amber-200 bg-amber-50/50 shadow-sm">
             <CardHeader>
               <div className="flex items-center space-x-2">
-                <AlertTriangle className="h-5 w-5 text-amber-600" />
-                <CardTitle className="text-amber-900">
+                <AlertTriangle className="h-4 md:h-5 w-4 md:w-5 text-amber-600" />
+                <CardTitle className="text-amber-900 text-base md:text-lg">
                   Important Notice
                 </CardTitle>
               </div>
             </CardHeader>
             <CardContent>
-              <p className="text-sm text-amber-800 leading-relaxed">
+              <p className="text-xs md:text-sm text-amber-800 leading-relaxed">
                 Tax records displayed here are for informational purposes and
-                are managed by SecureBank&apos;s tax administration team. For
+                are managed by Anchor Group Investments tax administration team. For
                 personalized tax advice and filing requirements, please consult
                 with a qualified tax professional or contact our tax support
                 team.
@@ -557,7 +566,7 @@ export default function TaxesPage() {
               <Button
                 variant="outline"
                 size="sm"
-                className="mt-4 border-amber-300 text-amber-700 hover:bg-amber-100"
+                className="mt-4 border-amber-300 text-amber-700 hover:bg-amber-100 text-xs md:text-sm"
               >
                 Contact Tax Support
               </Button>
