@@ -591,7 +591,7 @@ export default function DashboardPage() {
 
                   <div className="relative p-8">
                     <div className="flex items-center justify-between mb-6">
-                      <div className="bg-gradient-to-br from-[#F26623] to-[#E55A1F] rounded-2xl p-4 shadow-lg">
+                      <div className="bg-transparent rounded-2xl p-4 shadow-lg">
                         <CryptoIcon crypto={cryptoSymbol} />
                       </div>
                       <div className="text-right">
