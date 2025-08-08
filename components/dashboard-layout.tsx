@@ -354,16 +354,6 @@ export default function DashboardLayout({
               <Menu className="h-5 w-5" />
             </Button>
 
-            {/* Mobile: Show only icon and abbreviated title */}
-            <div className="flex md:hidden items-center space-x-2">
-              <div className="bg-gradient-to-r from-[#F26623] to-[#E55A1F] rounded-full p-1.5">
-                <TrendingUp className="h-4 w-4 text-white" />
-              </div>
-              <div>
-                <h2 className="text-sm font-bold text-gray-900">Dashboard</h2>
-              </div>
-            </div>
-
             {/* Desktop: Show full title */}
             <div className="hidden md:flex items-center space-x-3">
               <div>
