@@ -217,15 +217,14 @@ export default function DashboardLayout({
           <div className="absolute bottom-0 left-0 w-24 h-24 bg-white/5 rounded-full translate-y-12 -translate-x-12"></div>
 
           <div className="relative z-10 flex items-center justify-between h-16 sm:h-20 px-4 sm:px-6">
-            <div className="flex items-center space-x-2 sm:space-x-3">
-              <div className="bg-white/20 backdrop-blur-sm rounded-full p-1.5 sm:p-2">
-                <Building2 className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
-              </div>
-              <div className="hidden sm:block">
-                <h1 className="text-white font-bold text-sm sm:text-base">
-                  Anchor Bank
-                </h1>
-                <p className="text-orange-100 text-xs">Professional Banking</p>
+            <div className="flex items-center justify-center">
+              <div className="relative w-60 h-36 overflow-hidden">
+                <Image
+                  src="/anchor2_white.svg"
+                  alt="Anchor Bank Logo"
+                  fill
+                  className="object-contain"
+                />
               </div>
             </div>
             <Button

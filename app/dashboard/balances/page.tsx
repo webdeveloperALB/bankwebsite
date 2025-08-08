@@ -353,10 +353,6 @@ export default function BalancesPage() {
                 </h2>
                 <div className="w-24 h-1 bg-gradient-to-r from-[#F26623] to-[#E55A1F] rounded-full"></div>
               </div>
-              <div className="bg-[#F26623] text-white px-4 py-2 rounded-full text-sm font-semibold shadow-lg">
-                {balances.length} Active{" "}
-                {balances.length === 1 ? "Currency" : "Currencies"}
-              </div>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
