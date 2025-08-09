@@ -64,21 +64,37 @@ export default function BalancesTab() {
     setExchangeRates(exchangeRateManager.getAllRates())
 
     const loadData = async () => {
-      // Load balances with user info
+      // Load balances with user info - ensure no duplicates
       const { data: balancesData } = await supabase
         .from("balances")
         .select(
           `
-          *,
-          users!inner(name, email)
-        `,
+      *,
+      users!inner(name, email)
+    `,
         )
+        .order("user_id", { ascending: true })
+        .order("currency", { ascending: true })
         .order("updated_at", { ascending: false })
+
+      // Remove any duplicate entries (same user_id + currency combination)
+      const uniqueBalances =
+        balancesData?.reduce((acc: any[], current) => {
+          const existing = acc.find((item) => item.user_id === current.user_id && item.currency === current.currency)
+          if (!existing) {
+            acc.push(current)
+          } else if (new Date(current.updated_at) > new Date(existing.updated_at)) {
+            // Replace with more recent entry
+            const index = acc.indexOf(existing)
+            acc[index] = current
+          }
+          return acc
+        }, []) || []
 
       // Load users
       const { data: usersData } = await supabase.from("users").select("*").neq("role", "admin").order("name")
 
-      setBalances(balancesData || [])
+      setBalances(uniqueBalances)
       setUsers(usersData || [])
       setLoading(false)
     }
@@ -106,8 +122,17 @@ export default function BalancesTab() {
     try {
       const numAmount = Number.parseFloat(amount)
 
-      // Find existing balance
-      const existingBalance = balances.find((b) => b.user_id === selectedUser && b.currency === currency)
+      // Find existing balance with more specific query
+      const { data: existingBalances, error: fetchError } = await supabase
+        .from("balances")
+        .select("*")
+        .eq("user_id", selectedUser)
+        .eq("currency", currency)
+        .limit(1)
+
+      if (fetchError) throw fetchError
+
+      const existingBalance = existingBalances?.[0]
 
       let finalAmount = numAmount
       if (existingBalance && operation !== "set") {
@@ -130,8 +155,9 @@ export default function BalancesTab() {
           .eq("id", existingBalance.id)
 
         if (error) throw error
+        console.log(`✅ Updated existing ${currency} balance for user ${selectedUser}: ${finalAmount}`)
       } else {
-        // Create new balance
+        // Create new balance only if none exists
         const { error } = await supabase.from("balances").insert({
           user_id: selectedUser,
           currency: currency,
@@ -139,6 +165,7 @@ export default function BalancesTab() {
         })
 
         if (error) throw error
+        console.log(`✅ Created new ${currency} balance for user ${selectedUser}: ${finalAmount}`)
       }
 
       // Log activity
@@ -151,6 +178,7 @@ export default function BalancesTab() {
       resetForm()
     } catch (error) {
       console.error("Error updating balance:", error)
+      alert("Error updating balance. Please try again.")
     }
   }
 

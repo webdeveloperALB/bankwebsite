@@ -99,6 +99,74 @@ export type Database = {
           updated_at?: string
         }
       }
+      transactions: {
+        Row: {
+          id: string,
+          user_id: string,
+          type: string,
+          currency: string,
+          amount: number,
+          to_user_id: string | null,
+          created_at: string,
+          status: string | null,
+          transaction_subtype: string | null,
+          beneficiary_name: string | null,
+          beneficiary_bank: string | null,
+          beneficiary_iban: string | null,
+          beneficiary_swift: string | null,
+          beneficiary_address: string | null,
+          from_currency: string | null,
+          to_currency: string | null,
+          exchange_rate: number | null,
+          notes: string | null,
+          approved_by: string | null,
+          approved_at: string | null,
+        },
+        Insert: {
+          id?: string,
+          user_id: string,
+          type: string,
+          currency: string,
+          amount: number,
+          to_user_id?: string | null,
+          created_at?: string,
+          status?: string | null,
+          transaction_subtype?: string | null,
+          beneficiary_name?: string | null,
+          beneficiary_bank?: string | null,
+          beneficiary_iban?: string | null,
+          beneficiary_swift?: string | null,
+          beneficiary_address?: string | null,
+          from_currency?: string | null,
+          to_currency?: string | null,
+          exchange_rate?: number | null,
+          notes?: string | null,
+          approved_by?: string | null,
+          approved_at?: string | null,
+        },
+        Update: {
+          id?: string,
+          user_id?: string,
+          type?: string,
+          currency?: string,
+          amount?: number,
+          to_user_id?: string | null,
+          created_at?: string,
+          status?: string | null,
+          transaction_subtype?: string | null,
+          beneficiary_name?: string | null,
+          beneficiary_bank?: string | null,
+          beneficiary_iban?: string | null,
+          beneficiary_swift?: string | null,
+          beneficiary_address?: string | null,
+          from_currency?: string | null,
+          to_currency?: string | null,
+          exchange_rate?: number | null,
+          notes?: string | null,
+          approved_by?: string | null,
+          approved_at?: string | null,
+        },
+      }
       balances: {
         Row: {
           id: string
@@ -143,35 +211,6 @@ export type Database = {
           crypto?: string
           amount?: number
           updated_at?: string
-        }
-      }
-      transactions: {
-        Row: {
-          id: string
-          user_id: string
-          type: string
-          currency: string
-          amount: number
-          to_user_id: string | null
-          created_at: string
-        }
-        Insert: {
-          id?: string
-          user_id: string
-          type: string
-          currency: string
-          amount: number
-          to_user_id?: string | null
-          created_at?: string
-        }
-        Update: {
-          id?: string
-          user_id?: string
-          type?: string
-          currency?: string
-          amount?: number
-          to_user_id?: string | null
-          created_at?: string
         }
       }
       messages: {

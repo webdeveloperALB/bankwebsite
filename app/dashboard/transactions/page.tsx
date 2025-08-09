@@ -1,26 +1,18 @@
-"use client";
+"use client"
 
-import { useEffect, useState } from "react";
-import { supabase } from "@/lib/supabase";
-import { getCurrentUser } from "@/lib/auth";
-import DashboardLayout from "@/components/dashboard-layout";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import type React from "react"
+
+import { useEffect, useState } from "react"
+import { useRouter } from "next/navigation"
+import { supabase } from "@/lib/supabase"
+import { getCurrentUser } from "@/lib/auth"
+import DashboardLayout from "@/components/dashboard-layout"
+import { Card, CardContent, CardDescription, CardTitle } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Textarea } from "@/components/ui/textarea"
 import {
   Dialog,
   DialogContent,
@@ -28,248 +20,313 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from "@/components/ui/dialog";
+} from "@/components/ui/dialog"
+import { Badge } from "@/components/ui/badge"
 import {
   ArrowUpDown,
   Send,
   ArrowUpRight,
   ArrowDownLeft,
-  Plus,
-  TrendingUp,
-  DollarSign,
   CreditCard,
   Clock,
   Shield,
-  Users,
   Building2,
   Filter,
   Download,
   Search,
-  Calendar,
-} from "lucide-react";
-import { Database } from "@/lib/supabase";
-import { convertCurrency, getCurrencyRate } from "@/lib/exchange-rates";
+  Banknote,
+  ArrowLeftRight,
+  ArrowUp,
+  CheckCircle,
+  XCircle,
+  AlertCircle,
+} from "lucide-react"
+import type { Database } from "@/lib/supabase"
 
-type User = Database["public"]["Tables"]["users"]["Row"];
-type Transaction = Database["public"]["Tables"]["transactions"]["Row"];
-type Balance = Database["public"]["Tables"]["balances"]["Row"];
+type User = Database["public"]["Tables"]["users"]["Row"]
+type Transaction = Database["public"]["Tables"]["transactions"]["Row"]
+type Balance = Database["public"]["Tables"]["balances"]["Row"]
+
+const CURRENCIES = ["USD", "EUR", "GBP", "CAD", "AUD", "JPY", "CHF"]
 
 export default function TransactionsPage() {
-  const [user, setUser] = useState<User | null>(null);
-  const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [balances, setBalances] = useState<Balance[]>([]);
-  const [users, setUsers] = useState<User[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [sending, setSending] = useState(false);
-  const [dialogOpen, setDialogOpen] = useState(false);
+  const router = useRouter()
+  const [user, setUser] = useState<User | null>(null)
+  const [transactions, setTransactions] = useState<Transaction[]>([])
+  const [balances, setBalances] = useState<Balance[]>([])
+  const [loading, setLoading] = useState(true)
+  const [sending, setSending] = useState(false)
+  const [dialogOpen, setDialogOpen] = useState(false)
+  const [currentStep, setCurrentStep] = useState<"main" | "transfer" | "inside-bank" | "outside-bank" | "withdrawal">(
+    "main",
+  )
 
-  // Transfer form state
-  const [transferAmount, setTransferAmount] = useState("");
-  const [transferCurrency, setTransferCurrency] = useState("");
-  const [transferToUser, setTransferToUser] = useState("");
+  // Form states
+  const [transferType, setTransferType] = useState<"inside" | "outside">("inside")
+  const [fromCurrency, setFromCurrency] = useState("")
+  const [toCurrency, setToCurrency] = useState("")
+  const [amount, setAmount] = useState("")
+
+  // Outside bank transfer fields
+  const [beneficiaryName, setBeneficiaryName] = useState("")
+  const [beneficiaryBank, setBeneficiaryBank] = useState("")
+  const [beneficiaryIban, setBeneficiaryIban] = useState("")
+  const [beneficiarySwift, setBeneficiarySwift] = useState("")
+  const [beneficiaryAddress, setBeneficiaryAddress] = useState("")
+  const [transferCurrency, setTransferCurrency] = useState("")
 
   useEffect(() => {
     const loadData = async () => {
       try {
-        const currentUser = await getCurrentUser();
-        if (!currentUser) return;
+        const currentUser = await getCurrentUser()
+        if (!currentUser) return
 
-        setUser(currentUser);
+        setUser(currentUser)
 
         // Load transactions
         const { data: transactionsData } = await supabase
           .from("transactions")
           .select("*")
           .or(`user_id.eq.${currentUser.id},to_user_id.eq.${currentUser.id}`)
-          .order("created_at", { ascending: false });
+          .order("created_at", { ascending: false })
 
-        setTransactions(transactionsData || []);
+        setTransactions(transactionsData || [])
 
         // Load user balances
-        const { data: balancesData } = await supabase
-          .from("balances")
-          .select("*")
-          .eq("user_id", currentUser.id);
+        const { data: balancesData } = await supabase.from("balances").select("*").eq("user_id", currentUser.id)
 
-        setBalances(balancesData || []);
-
-        // Load other users for transfers
-        const { data: usersData } = await supabase
-          .from("users")
-          .select("*")
-          .neq("id", currentUser.id);
-
-        setUsers(usersData || []);
+        setBalances(balancesData || [])
 
         // Set up real-time subscription
         const channel = supabase
           .channel("transactions")
-          .on(
-            "postgres_changes",
-            { event: "*", schema: "public", table: "transactions" },
-            () => {
-              // Reload transactions
-              supabase
-                .from("transactions")
-                .select("*")
-                .or(
-                  `user_id.eq.${currentUser.id},to_user_id.eq.${currentUser.id}`
-                )
-                .order("created_at", { ascending: false })
-                .then(({ data }) => setTransactions(data || []));
-            }
-          )
-          .subscribe();
+          .on("postgres_changes", { event: "*", schema: "public", table: "transactions" }, () => {
+            // Reload transactions
+            supabase
+              .from("transactions")
+              .select("*")
+              .or(`user_id.eq.${currentUser.id},to_user_id.eq.${currentUser.id}`)
+              .order("created_at", { ascending: false })
+              .then(({ data }) => setTransactions(data || []))
+          })
+          .subscribe()
 
         return () => {
-          supabase.removeChannel(channel);
-        };
+          supabase.removeChannel(channel)
+        }
       } catch (error) {
-        console.error("Error loading transactions:", error);
+        console.error("Error loading transactions:", error)
       } finally {
-        setLoading(false);
+        setLoading(false)
       }
-    };
+    }
 
-    loadData();
-  }, []);
+    loadData()
+  }, [])
 
-  const handleTransfer = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!user || !transferAmount || !transferCurrency || !transferToUser)
-      return;
+  const handleDeposit = () => {
+    router.push("/dashboard/deposits")
+  }
 
-    setSending(true);
+  const handleInsideBankTransfer = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!user || !amount || !fromCurrency || !toCurrency) return
+
+    setSending(true)
 
     try {
-      const amount = Number(transferAmount);
+      const transferAmount = Number(amount)
 
       // Check if user has sufficient balance
-      const userBalance = balances.find((b) => b.currency === transferCurrency);
-      if (!userBalance || Number(userBalance.amount) < amount) {
-        alert("Insufficient balance");
-        return;
+      const userBalance = balances.find((b) => b.currency === fromCurrency)
+      if (!userBalance || Number(userBalance.amount) < transferAmount) {
+        alert("Insufficient balance")
+        return
       }
 
-      // Create transaction record
-      const { error: transactionError } = await supabase
-        .from("transactions")
-        .insert({
-          user_id: user.id,
-          type: "transfer",
-          currency: transferCurrency,
-          amount: amount,
-          to_user_id: transferToUser,
-        });
+      // Create transaction record with pending status
+      const { error: transactionError } = await supabase.from("transactions").insert({
+        user_id: user.id,
+        type: "transfer",
+        transaction_subtype: "inside_bank",
+        currency: fromCurrency,
+        amount: transferAmount,
+        from_currency: fromCurrency,
+        to_currency: toCurrency,
+        status: "pending",
+        notes: `Currency conversion from ${fromCurrency} to ${toCurrency}`,
+      })
 
-      if (transactionError) throw transactionError;
+      if (transactionError) throw transactionError
 
-      // Update sender balance
-      const { error: senderError } = await supabase
-        .from("balances")
-        .update({
-          amount: Number(userBalance.amount) - amount,
-          updated_at: new Date().toISOString(),
-        })
-        .eq("id", userBalance.id);
+      // Log activity
+      await supabase.from("activity_logs").insert({
+        user_id: user.id,
+        activity: `Requested currency conversion: ${transferAmount} ${fromCurrency} to ${toCurrency}`,
+      })
 
-      if (senderError) throw senderError;
-
-      // Update or create receiver balance
-      const { data: receiverBalance } = await supabase
-        .from("balances")
-        .select("*")
-        .eq("user_id", transferToUser)
-        .eq("currency", transferCurrency)
-        .single();
-
-      if (receiverBalance) {
-        // Update existing balance
-        const { error: receiverError } = await supabase
-          .from("balances")
-          .update({
-            amount: Number(receiverBalance.amount) + amount,
-            updated_at: new Date().toISOString(),
-          })
-          .eq("id", receiverBalance.id);
-
-        if (receiverError) throw receiverError;
-      } else {
-        // Create new balance
-        const { error: newBalanceError } = await supabase
-          .from("balances")
-          .insert({
-            user_id: transferToUser,
-            currency: transferCurrency,
-            amount: amount,
-          });
-
-        if (newBalanceError) throw newBalanceError;
-      }
-
-      // Log activities
-      await supabase.from("activity_logs").insert([
-        {
-          user_id: user.id,
-          activity: `Sent ${amount} ${transferCurrency} to another user`,
-        },
-        {
-          user_id: transferToUser,
-          activity: `Received ${amount} ${transferCurrency} from another user`,
-        },
-      ]);
-
-      // Reload balances
-      const { data: updatedBalances } = await supabase
-        .from("balances")
-        .select("*")
-        .eq("user_id", user.id);
-
-      setBalances(updatedBalances || []);
-
-      setTransferAmount("");
-      setTransferCurrency("");
-      setTransferToUser("");
-      setDialogOpen(false);
+      resetForm()
+      alert("Transfer request submitted for approval")
     } catch (error) {
-      console.error("Error sending transfer:", error);
-      alert("Transfer failed. Please try again.");
+      console.error("Error creating transfer:", error)
+      alert("Transfer failed. Please try again.")
     } finally {
-      setSending(false);
+      setSending(false)
     }
-  };
+  }
+
+  const handleOutsideBankTransfer = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!user || !amount || !transferCurrency || !beneficiaryName || !beneficiaryBank) return
+
+    setSending(true)
+
+    try {
+      const transferAmount = Number(amount)
+
+      // Check if user has sufficient balance
+      const userBalance = balances.find((b) => b.currency === transferCurrency)
+      if (!userBalance || Number(userBalance.amount) < transferAmount) {
+        alert("Insufficient balance")
+        return
+      }
+
+      // Create transaction record with pending status
+      const { error: transactionError } = await supabase.from("transactions").insert({
+        user_id: user.id,
+        type: "transfer",
+        transaction_subtype: "outside_bank",
+        currency: transferCurrency,
+        amount: transferAmount,
+        beneficiary_name: beneficiaryName,
+        beneficiary_bank: beneficiaryBank,
+        beneficiary_iban: beneficiaryIban,
+        beneficiary_swift: beneficiarySwift,
+        beneficiary_address: beneficiaryAddress,
+        status: "pending",
+        notes: `External bank transfer to ${beneficiaryName}`,
+      })
+
+      if (transactionError) throw transactionError
+
+      // Log activity
+      await supabase.from("activity_logs").insert({
+        user_id: user.id,
+        activity: `Requested external bank transfer: ${transferAmount} ${transferCurrency} to ${beneficiaryName}`,
+      })
+
+      resetForm()
+      alert("External transfer request submitted for approval")
+    } catch (error) {
+      console.error("Error creating transfer:", error)
+      alert("Transfer failed. Please try again.")
+    } finally {
+      setSending(false)
+    }
+  }
+
+  const handleWithdrawal = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!user || !amount || !transferCurrency || !beneficiaryName || !beneficiaryBank) return
+
+    setSending(true)
+
+    try {
+      const withdrawalAmount = Number(amount)
+
+      // Check if user has sufficient balance
+      const userBalance = balances.find((b) => b.currency === transferCurrency)
+      if (!userBalance || Number(userBalance.amount) < withdrawalAmount) {
+        alert("Insufficient balance")
+        return
+      }
+
+      // Create transaction record with pending status
+      const { error: transactionError } = await supabase.from("transactions").insert({
+        user_id: user.id,
+        type: "withdrawal",
+        currency: transferCurrency,
+        amount: withdrawalAmount,
+        beneficiary_name: beneficiaryName,
+        beneficiary_bank: beneficiaryBank,
+        beneficiary_iban: beneficiaryIban,
+        beneficiary_swift: beneficiarySwift,
+        beneficiary_address: beneficiaryAddress,
+        status: "pending",
+        notes: `Withdrawal to ${beneficiaryName}`,
+      })
+
+      if (transactionError) throw transactionError
+
+      // Log activity
+      await supabase.from("activity_logs").insert({
+        user_id: user.id,
+        activity: `Requested withdrawal: ${withdrawalAmount} ${transferCurrency} to ${beneficiaryName}`,
+      })
+
+      resetForm()
+      alert("Withdrawal request submitted for approval")
+    } catch (error) {
+      console.error("Error creating withdrawal:", error)
+      alert("Withdrawal failed. Please try again.")
+    } finally {
+      setSending(false)
+    }
+  }
+
+  const resetForm = () => {
+    setCurrentStep("main")
+    setTransferType("inside")
+    setFromCurrency("")
+    setToCurrency("")
+    setAmount("")
+    setBeneficiaryName("")
+    setBeneficiaryBank("")
+    setBeneficiaryIban("")
+    setBeneficiarySwift("")
+    setBeneficiaryAddress("")
+    setTransferCurrency("")
+    setDialogOpen(false)
+  }
 
   const getTransactionIcon = (transaction: Transaction) => {
     if (transaction.type === "deposit") {
-      return <ArrowDownLeft className="h-5 w-5 text-green-600" />;
+      return <ArrowDownLeft className="h-5 w-5 text-green-600" />
     } else if (transaction.type === "transfer") {
       if (transaction.user_id === user?.id) {
-        return <ArrowUpRight className="h-5 w-5 text-red-600" />;
+        return <ArrowUpRight className="h-5 w-5 text-red-600" />
       } else {
-        return <ArrowDownLeft className="h-5 w-5 text-green-600" />;
+        return <ArrowDownLeft className="h-5 w-5 text-green-600" />
       }
+    } else if (transaction.type === "withdrawal") {
+      return <ArrowUp className="h-5 w-5 text-red-600" />
     }
-    return <ArrowUpDown className="h-5 w-5 text-gray-600" />;
-  };
+    return <ArrowUpDown className="h-5 w-5 text-gray-600" />
+  }
 
   const getTransactionDescription = (transaction: Transaction) => {
     if (transaction.type === "deposit") {
-      return "Account Deposit";
+      return "Account Deposit"
     } else if (transaction.type === "transfer") {
-      if (transaction.user_id === user?.id) {
-        return "Outgoing Transfer";
+      if (transaction.transaction_subtype === "inside_bank") {
+        return "Currency Conversion"
+      } else if (transaction.transaction_subtype === "outside_bank") {
+        return "External Bank Transfer"
+      } else if (transaction.user_id === user?.id) {
+        return "Outgoing Transfer"
       } else {
-        return "Incoming Transfer";
+        return "Incoming Transfer"
       }
+    } else if (transaction.type === "withdrawal") {
+      return "Withdrawal"
     }
-    return transaction.type;
-  };
+    return transaction.type
+  }
 
   const getTransactionAmount = (transaction: Transaction) => {
-    const isIncoming =
-      transaction.type === "deposit" || transaction.to_user_id === user?.id;
-    const sign = isIncoming ? "+" : "-";
-    const colorClass = isIncoming ? "text-green-600" : "text-red-600";
+    const isIncoming = transaction.type === "deposit" || transaction.to_user_id === user?.id
+    const sign = isIncoming ? "+" : "-"
+    const colorClass = isIncoming ? "text-green-600" : "text-red-600"
 
     return {
       sign,
@@ -277,13 +334,438 @@ export default function TransactionsPage() {
       amount: Number(transaction.amount).toLocaleString("en-US", {
         minimumFractionDigits: 2,
       }),
-    };
-  };
+    }
+  }
+
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case "pending":
+        return (
+          <Badge variant="outline" className="text-yellow-600 border-yellow-600">
+            <Clock className="h-3 w-3 mr-1" />
+            Pending
+          </Badge>
+        )
+      case "approved":
+        return (
+          <Badge variant="outline" className="text-green-600 border-green-600">
+            <CheckCircle className="h-3 w-3 mr-1" />
+            Approved
+          </Badge>
+        )
+      case "rejected":
+        return (
+          <Badge variant="outline" className="text-red-600 border-red-600">
+            <XCircle className="h-3 w-3 mr-1" />
+            Rejected
+          </Badge>
+        )
+      case "completed":
+        return (
+          <Badge variant="outline" className="text-blue-600 border-blue-600">
+            <CheckCircle className="h-3 w-3 mr-1" />
+            Completed
+          </Badge>
+        )
+      default:
+        return <Badge variant="outline">{status}</Badge>
+    }
+  }
+
+  const renderDialogContent = () => {
+    if (currentStep === "main") {
+      return (
+        <div className="space-y-4">
+          <DialogHeader>
+            <DialogTitle className="text-[#F26623] text-xl font-bold flex items-center">
+              <Send className="h-5 w-5 mr-2" />
+              Send Money
+            </DialogTitle>
+            <DialogDescription className="text-gray-600">Choose your transaction type</DialogDescription>
+          </DialogHeader>
+
+          <div className="grid gap-4">
+            <Button
+              onClick={handleDeposit}
+              className="flex items-center justify-start p-6 h-auto bg-gradient-to-r from-green-50 to-green-100 hover:from-green-100 hover:to-green-200 border-2 border-green-200 text-green-800"
+              variant="outline"
+            >
+              <Banknote className="h-8 w-8 mr-4 text-green-600" />
+              <div className="text-left">
+                <div className="font-semibold text-lg">Deposit</div>
+                <div className="text-sm text-green-600">Add money to your account</div>
+              </div>
+            </Button>
+
+            <Button
+              onClick={() => setCurrentStep("transfer")}
+              className="flex items-center justify-start p-6 h-auto bg-gradient-to-r from-blue-50 to-blue-100 hover:from-blue-100 hover:to-blue-200 border-2 border-blue-200 text-blue-800"
+              variant="outline"
+            >
+              <ArrowLeftRight className="h-8 w-8 mr-4 text-blue-600" />
+              <div className="text-left">
+                <div className="font-semibold text-lg">Transfer</div>
+                <div className="text-sm text-blue-600">Send money to banks or convert currency</div>
+              </div>
+            </Button>
+
+            <Button
+              onClick={() => setCurrentStep("withdrawal")}
+              className="flex items-center justify-start p-6 h-auto bg-gradient-to-r from-red-50 to-red-100 hover:from-red-100 hover:to-red-200 border-2 border-red-200 text-red-800"
+              variant="outline"
+            >
+              <ArrowUp className="h-8 w-8 mr-4 text-red-600" />
+              <div className="text-left">
+                <div className="font-semibold text-lg">Withdrawal</div>
+                <div className="text-sm text-red-600">Withdraw money to your bank account</div>
+              </div>
+            </Button>
+          </div>
+        </div>
+      )
+    }
+
+    if (currentStep === "transfer") {
+      return (
+        <div className="space-y-4">
+          <DialogHeader>
+            <DialogTitle className="text-[#F26623] text-xl font-bold flex items-center">
+              <ArrowLeftRight className="h-5 w-5 mr-2" />
+              Transfer Options
+            </DialogTitle>
+            <DialogDescription className="text-gray-600">Choose your transfer type</DialogDescription>
+          </DialogHeader>
+
+          <div className="grid gap-4">
+            <Button
+              onClick={() => setCurrentStep("inside-bank")}
+              className="flex items-center justify-start p-6 h-auto bg-gradient-to-r from-purple-50 to-purple-100 hover:from-purple-100 hover:to-purple-200 border-2 border-purple-200 text-purple-800"
+              variant="outline"
+            >
+              <ArrowLeftRight className="h-8 w-8 mr-4 text-purple-600" />
+              <div className="text-left">
+                <div className="font-semibold text-lg">Inside Bank</div>
+                <div className="text-sm text-purple-600">Convert between your currencies</div>
+              </div>
+            </Button>
+
+            <Button
+              onClick={() => setCurrentStep("outside-bank")}
+              className="flex items-center justify-start p-6 h-auto bg-gradient-to-r from-orange-50 to-orange-100 hover:from-orange-100 hover:to-orange-200 border-2 border-orange-200 text-orange-800"
+              variant="outline"
+            >
+              <Building2 className="h-8 w-8 mr-4 text-orange-600" />
+              <div className="text-left">
+                <div className="font-semibold text-lg">Outside Bank</div>
+                <div className="text-sm text-orange-600">Transfer to external bank account</div>
+              </div>
+            </Button>
+          </div>
+
+          <Button onClick={() => setCurrentStep("main")} variant="outline" className="w-full">
+            Back
+          </Button>
+        </div>
+      )
+    }
+
+    if (currentStep === "inside-bank") {
+      return (
+        <div className="space-y-4">
+          <DialogHeader>
+            <DialogTitle className="text-[#F26623] text-xl font-bold flex items-center">
+              <ArrowLeftRight className="h-5 w-5 mr-2" />
+              Currency Conversion
+            </DialogTitle>
+            <DialogDescription className="text-gray-600">Convert between your account currencies</DialogDescription>
+          </DialogHeader>
+
+          <form onSubmit={handleInsideBankTransfer} className="space-y-4">
+            <div className="space-y-2">
+              <Label>From Currency</Label>
+              <Select value={fromCurrency} onValueChange={setFromCurrency}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select currency to convert from" />
+                </SelectTrigger>
+                <SelectContent>
+                  {balances.map((balance) => (
+                    <SelectItem key={balance.id} value={balance.currency}>
+                      {balance.currency} (Available: {Number(balance.amount).toFixed(2)})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label>To Currency</Label>
+              <Select value={toCurrency} onValueChange={setToCurrency}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select currency to convert to" />
+                </SelectTrigger>
+                <SelectContent>
+                  {CURRENCIES.filter((curr) => curr !== fromCurrency).map((currency) => (
+                    <SelectItem key={currency} value={currency}>
+                      {currency}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Amount</Label>
+              <Input
+                type="number"
+                step="0.01"
+                value={amount}
+                onChange={(e) => setAmount(e.target.value)}
+                placeholder="0.00"
+                required
+              />
+            </div>
+
+            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+              <p className="text-sm text-yellow-800">
+                <AlertCircle className="h-4 w-4 inline mr-1" />
+                This transaction requires admin approval and may take 1-2 business days to process.
+              </p>
+            </div>
+
+            <div className="flex gap-2">
+              <Button type="button" onClick={() => setCurrentStep("transfer")} variant="outline" className="flex-1">
+                Back
+              </Button>
+              <Button type="submit" className="flex-1 bg-gradient-to-r from-[#F26623] to-[#E55A1F]" disabled={sending}>
+                {sending ? "Processing..." : "Submit Request"}
+              </Button>
+            </div>
+          </form>
+        </div>
+      )
+    }
+
+    if (currentStep === "outside-bank") {
+      return (
+        <div className="space-y-4">
+          <DialogHeader>
+            <DialogTitle className="text-[#F26623] text-xl font-bold flex items-center">
+              <Building2 className="h-5 w-5 mr-2" />
+              External Bank Transfer
+            </DialogTitle>
+            <DialogDescription className="text-gray-600">Transfer money to an external bank account</DialogDescription>
+          </DialogHeader>
+
+          <form onSubmit={handleOutsideBankTransfer} className="space-y-4">
+            <div className="space-y-2">
+              <Label>Currency</Label>
+              <Select value={transferCurrency} onValueChange={setTransferCurrency}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select currency" />
+                </SelectTrigger>
+                <SelectContent>
+                  {balances.map((balance) => (
+                    <SelectItem key={balance.id} value={balance.currency}>
+                      {balance.currency} (Available: {Number(balance.amount).toFixed(2)})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Amount</Label>
+              <Input
+                type="number"
+                step="0.01"
+                value={amount}
+                onChange={(e) => setAmount(e.target.value)}
+                placeholder="0.00"
+                required
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label>Beneficiary Name</Label>
+              <Input
+                value={beneficiaryName}
+                onChange={(e) => setBeneficiaryName(e.target.value)}
+                placeholder="Full name of recipient"
+                required
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label>Bank Name</Label>
+              <Input
+                value={beneficiaryBank}
+                onChange={(e) => setBeneficiaryBank(e.target.value)}
+                placeholder="Name of recipient's bank"
+                required
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label>IBAN</Label>
+              <Input
+                value={beneficiaryIban}
+                onChange={(e) => setBeneficiaryIban(e.target.value)}
+                placeholder="International Bank Account Number"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label>SWIFT Code</Label>
+              <Input
+                value={beneficiarySwift}
+                onChange={(e) => setBeneficiarySwift(e.target.value)}
+                placeholder="Bank SWIFT/BIC code"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label>Beneficiary Address</Label>
+              <Textarea
+                value={beneficiaryAddress}
+                onChange={(e) => setBeneficiaryAddress(e.target.value)}
+                placeholder="Full address of recipient"
+                rows={3}
+              />
+            </div>
+
+            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+              <p className="text-sm text-yellow-800">
+                <AlertCircle className="h-4 w-4 inline mr-1" />
+                External transfers require admin approval and may take 3-5 business days to process.
+              </p>
+            </div>
+
+            <div className="flex gap-2">
+              <Button type="button" onClick={() => setCurrentStep("transfer")} variant="outline" className="flex-1">
+                Back
+              </Button>
+              <Button type="submit" className="flex-1 bg-gradient-to-r from-[#F26623] to-[#E55A1F]" disabled={sending}>
+                {sending ? "Processing..." : "Submit Request"}
+              </Button>
+            </div>
+          </form>
+        </div>
+      )
+    }
+
+    if (currentStep === "withdrawal") {
+      return (
+        <div className="space-y-4">
+          <DialogHeader>
+            <DialogTitle className="text-[#F26623] text-xl font-bold flex items-center">
+              <ArrowUp className="h-5 w-5 mr-2" />
+              Withdrawal Request
+            </DialogTitle>
+            <DialogDescription className="text-gray-600">Withdraw money to your bank account</DialogDescription>
+          </DialogHeader>
+
+          <form onSubmit={handleWithdrawal} className="space-y-4">
+            <div className="space-y-2">
+              <Label>Currency</Label>
+              <Select value={transferCurrency} onValueChange={setTransferCurrency}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select currency" />
+                </SelectTrigger>
+                <SelectContent>
+                  {balances.map((balance) => (
+                    <SelectItem key={balance.id} value={balance.currency}>
+                      {balance.currency} (Available: {Number(balance.amount).toFixed(2)})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Amount</Label>
+              <Input
+                type="number"
+                step="0.01"
+                value={amount}
+                onChange={(e) => setAmount(e.target.value)}
+                placeholder="0.00"
+                required
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label>Account Holder Name</Label>
+              <Input
+                value={beneficiaryName}
+                onChange={(e) => setBeneficiaryName(e.target.value)}
+                placeholder="Your full name as on bank account"
+                required
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label>Bank Name</Label>
+              <Input
+                value={beneficiaryBank}
+                onChange={(e) => setBeneficiaryBank(e.target.value)}
+                placeholder="Name of your bank"
+                required
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label>IBAN</Label>
+              <Input
+                value={beneficiaryIban}
+                onChange={(e) => setBeneficiaryIban(e.target.value)}
+                placeholder="Your International Bank Account Number"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label>SWIFT Code</Label>
+              <Input
+                value={beneficiarySwift}
+                onChange={(e) => setBeneficiarySwift(e.target.value)}
+                placeholder="Your bank's SWIFT/BIC code"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label>Your Address</Label>
+              <Textarea
+                value={beneficiaryAddress}
+                onChange={(e) => setBeneficiaryAddress(e.target.value)}
+                placeholder="Your full address"
+                rows={3}
+              />
+            </div>
+
+            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+              <p className="text-sm text-yellow-800">
+                <AlertCircle className="h-4 w-4 inline mr-1" />
+                Withdrawal requests require admin approval and may take 2-3 business days to process.
+              </p>
+            </div>
+
+            <div className="flex gap-2">
+              <Button type="button" onClick={() => setCurrentStep("main")} variant="outline" className="flex-1">
+                Back
+              </Button>
+              <Button type="submit" className="flex-1 bg-gradient-to-r from-[#F26623] to-[#E55A1F]" disabled={sending}>
+                {sending ? "Processing..." : "Submit Request"}
+              </Button>
+            </div>
+          </form>
+        </div>
+      )
+    }
+  }
 
   return (
     <DashboardLayout currentSection="transactions">
       <div className="min-h-screen bg-gradient-to-br from-orange-50 to-amber-50">
-        {/* Hero Header - Professional Banking Style */}
+        {/* Hero Header */}
         <div className="relative overflow-hidden bg-gradient-to-r from-[#F26623] via-[#E55A1F] to-[#D94E1A] rounded-xl sm:rounded-2xl p-4 sm:p-6 lg:p-8 mb-6 sm:mb-8 shadow-2xl">
           <div className="absolute inset-0 bg-black/10"></div>
           <div className="absolute top-0 right-0 w-32 sm:w-48 md:w-64 h-32 sm:h-48 md:h-64 bg-white/10 rounded-full -translate-y-16 sm:-translate-y-24 md:-translate-y-32 translate-x-16 sm:translate-x-24 md:translate-x-32"></div>
@@ -296,13 +778,9 @@ export default function TransactionsPage() {
                   <ArrowUpDown className="h-6 w-6 sm:h-8 sm:w-8 text-white" />
                 </div>
                 <div>
-                  <h1 className="text-xl sm:text-3xl lg:text-4xl font-bold text-white mb-2">
-                    Transaction Center
-                  </h1>
+                  <h1 className="text-xl sm:text-3xl lg:text-4xl font-bold text-white mb-2">Transaction Center</h1>
                   <p className="text-xs sm:text-white lg:text-lg font-medium">
-                    <span className="hidden sm:inline">
-                      Secure banking transactions and transfer management
-                    </span>
+                    <span className="hidden sm:inline">Secure banking transactions and transfer management</span>
                     <span className="sm:hidden">Banking transactions</span>
                   </p>
                 </div>
@@ -326,128 +804,14 @@ export default function TransactionsPage() {
                       <span className="sm:hidden">Send</span>
                     </Button>
                   </DialogTrigger>
-                  <DialogContent className="sm:max-w-md">
-                    <DialogHeader>
-                      <DialogTitle className="text-[#F26623] text-xl font-bold flex items-center">
-                        <Send className="h-5 w-5 mr-2" />
-                        Send Money
-                      </DialogTitle>
-                      <DialogDescription className="text-gray-600">
-                        Transfer funds securely to another user
-                      </DialogDescription>
-                    </DialogHeader>
-                    <form onSubmit={handleTransfer} className="space-y-6">
-                      <div className="space-y-2">
-                        <Label
-                          htmlFor="recipient"
-                          className="text-gray-700 font-semibold"
-                        >
-                          Recipient
-                        </Label>
-                        <Select
-                          value={transferToUser}
-                          onValueChange={setTransferToUser}
-                        >
-                          <SelectTrigger className="border-[#F26623]/30 focus:border-[#F26623] focus:ring-[#F26623]/20">
-                            <SelectValue placeholder="Select recipient" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {users.map((u) => (
-                              <SelectItem key={u.id} value={u.id}>
-                                <div className="flex items-center space-x-2">
-                                  <div className="w-8 h-8 bg-gradient-to-r from-[#F26623] to-[#E55A1F] rounded-full flex items-center justify-center">
-                                    <span className="text-white text-xs font-bold">
-                                      {u.name.charAt(0).toUpperCase()}
-                                    </span>
-                                  </div>
-                                  <div>
-                                    <div className="font-semibold">
-                                      {u.name}
-                                    </div>
-                                    <div className="text-xs text-gray-500">
-                                      {u.email}
-                                    </div>
-                                  </div>
-                                </div>
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div className="space-y-2">
-                        <Label
-                          htmlFor="currency"
-                          className="text-gray-700 font-semibold"
-                        >
-                          Currency
-                        </Label>
-                        <Select
-                          value={transferCurrency}
-                          onValueChange={setTransferCurrency}
-                        >
-                          <SelectTrigger className="border-[#F26623]/30 focus:border-[#F26623] focus:ring-[#F26623]/20">
-                            <SelectValue placeholder="Select currency" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {balances.map((balance) => (
-                              <SelectItem
-                                key={balance.id}
-                                value={balance.currency}
-                              >
-                                <div className="flex items-center justify-between w-full">
-                                  <span className="font-semibold">
-                                    {balance.currency}
-                                  </span>
-                                  <span className="text-sm text-gray-500 ml-4">
-                                    Available:{" "}
-                                    {Number(balance.amount).toFixed(2)}
-                                  </span>
-                                </div>
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div className="space-y-2">
-                        <Label
-                          htmlFor="amount"
-                          className="text-gray-700 font-semibold"
-                        >
-                          Amount
-                        </Label>
-                        <Input
-                          id="amount"
-                          type="number"
-                          step="0.01"
-                          value={transferAmount}
-                          onChange={(e) => setTransferAmount(e.target.value)}
-                          placeholder="0.00"
-                          required
-                          className="border-[#F26623]/30 focus:border-[#F26623] focus:ring-[#F26623]/20"
-                        />
-                        {transferAmount && transferCurrency && (
-                          <div className="bg-[#F26623]/5 border border-[#F26623]/20 rounded-lg p-3">
-                            <p className="text-sm text-[#F26623] font-semibold">
-                              Transfer Amount: {transferAmount}{" "}
-                              {transferCurrency}
-                            </p>
-                          </div>
-                        )}
-                      </div>
-                      <Button
-                        type="submit"
-                        className="w-full bg-gradient-to-r from-[#F26623] to-[#E55A1F] hover:from-[#E55A1F] hover:to-[#D94E1A] text-white font-semibold py-3"
-                        disabled={sending}
-                      >
-                        {sending ? "Processing Transfer..." : "Send Money"}
-                      </Button>
-                    </form>
+                  <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
+                    {renderDialogContent()}
                   </DialogContent>
                 </Dialog>
               </div>
             </div>
 
-            {/* Transaction Summary Stats - Now 3 columns */}
+            {/* Transaction Summary Stats */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6">
               <div className="bg-white/20 backdrop-blur-sm rounded-xl p-4 border border-white/30">
                 <div className="flex items-center space-x-3">
@@ -455,11 +819,21 @@ export default function TransactionsPage() {
                     <ArrowUpDown className="h-5 w-5 text-white" />
                   </div>
                   <div>
-                    <p className="text-white/80 text-sm font-medium">
-                      Total Transactions
-                    </p>
+                    <p className="text-white/80 text-sm font-medium">Total Transactions</p>
+                    <p className="text-lg sm:text-2xl font-bold text-white">{transactions.length}</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-white/20 backdrop-blur-sm rounded-xl p-4 border border-white/30">
+                <div className="flex items-center space-x-3">
+                  <div className="bg-white/20 rounded-full p-2">
+                    <Clock className="h-5 w-5 text-white" />
+                  </div>
+                  <div>
+                    <p className="text-white/80 text-sm font-medium">Pending</p>
                     <p className="text-lg sm:text-2xl font-bold text-white">
-                      {transactions.length}
+                      {transactions.filter((t) => t.status === "pending").length}
                     </p>
                   </div>
                 </div>
@@ -468,35 +842,12 @@ export default function TransactionsPage() {
               <div className="bg-white/20 backdrop-blur-sm rounded-xl p-4 border border-white/30">
                 <div className="flex items-center space-x-3">
                   <div className="bg-white/20 rounded-full p-2">
-                    <ArrowUpRight className="h-5 w-5 text-white" />
+                    <CheckCircle className="h-5 w-5 text-white" />
                   </div>
                   <div>
-                    <p className="text-white/80 text-sm font-medium">Sent</p>
+                    <p className="text-white/80 text-sm font-medium">Completed</p>
                     <p className="text-lg sm:text-2xl font-bold text-white">
-                      {
-                        transactions.filter(
-                          (t) => t.user_id === user?.id && t.type === "transfer"
-                        ).length
-                      }
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="bg-white/20 backdrop-blur-sm rounded-xl p-4 border border-white/30">
-                <div className="flex items-center space-x-3">
-                  <div className="bg-white/20 rounded-full p-2">
-                    <ArrowDownLeft className="h-5 w-5 text-white" />
-                  </div>
-                  <div>
-                    <p className="text-white/80 text-sm font-medium">
-                      Received
-                    </p>
-                    <p className="text-lg sm:text-2xl font-bold text-white">
-                      {
-                        transactions.filter((t) => t.to_user_id === user?.id)
-                          .length
-                      }
+                      {transactions.filter((t) => t.status === "completed" || t.status === "approved").length}
                     </p>
                   </div>
                 </div>
@@ -505,92 +856,7 @@ export default function TransactionsPage() {
           </div>
         </div>
 
-        {/* Transaction Statistics Cards - Professional Design */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 mb-8">
-          <Card className="group relative bg-white rounded-2xl shadow-xl hover:shadow-2xl transition-all duration-500 overflow-hidden border-2 border-[#F26623]/10 hover:border-[#F26623]/30">
-            <div className="absolute inset-0 bg-gradient-to-br from-[#F26623]/5 to-[#E55A1F]/10"></div>
-            <div className="absolute top-0 right-0 w-32 h-32 bg-[#F26623]/10 rounded-full -translate-y-16 translate-x-16 group-hover:scale-150 transition-transform duration-700"></div>
-
-            <div className="relative p-6">
-              <CardHeader className="p-0 mb-4">
-                <div className="flex items-center justify-between">
-                  <div className="bg-gradient-to-br from-[#F26623] to-[#E55A1F] rounded-2xl p-3 shadow-lg">
-                    <ArrowUpDown className="h-6 w-6 text-white" />
-                  </div>
-                  <div className="text-right">
-                    <CardTitle className="text-sm font-semibold text-gray-600">
-                      Total Transactions
-                    </CardTitle>
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent className="p-0">
-                <div className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">
-                  {transactions.length}
-                </div>
-                <p className="text-sm text-gray-600">All time activity</p>
-              </CardContent>
-            </div>
-          </Card>
-
-          <Card className="group relative bg-white rounded-2xl shadow-xl hover:shadow-2xl transition-all duration-500 overflow-hidden border-2 border-[#F26623]/10 hover:border-[#F26623]/30">
-            <div className="absolute inset-0 bg-gradient-to-br from-[#F26623]/5 to-[#E55A1F]/10"></div>
-            <div className="absolute top-0 right-0 w-32 h-32 bg-[#F26623]/10 rounded-full -translate-y-16 translate-x-16 group-hover:scale-150 transition-transform duration-700"></div>
-
-            <div className="relative p-6">
-              <CardHeader className="p-0 mb-4">
-                <div className="flex items-center justify-between">
-                  <div className="bg-gradient-to-br from-red-500 to-red-600 rounded-2xl p-3 shadow-lg">
-                    <ArrowUpRight className="h-6 w-6 text-white" />
-                  </div>
-                  <div className="text-right">
-                    <CardTitle className="text-sm font-semibold text-gray-600">
-                      Outgoing Transfers
-                    </CardTitle>
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent className="p-0">
-                <div className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">
-                  {
-                    transactions.filter(
-                      (t) => t.user_id === user?.id && t.type === "transfer"
-                    ).length
-                  }
-                </div>
-                <p className="text-sm text-gray-600">Money sent</p>
-              </CardContent>
-            </div>
-          </Card>
-
-          <Card className="group relative bg-white rounded-2xl shadow-xl hover:shadow-2xl transition-all duration-500 overflow-hidden border-2 border-[#F26623]/10 hover:border-[#F26623]/30 sm:col-span-2 lg:col-span-1">
-            <div className="absolute inset-0 bg-gradient-to-br from-[#F26623]/5 to-[#E55A1F]/10"></div>
-            <div className="absolute top-0 right-0 w-32 h-32 bg-[#F26623]/10 rounded-full -translate-y-16 translate-x-16 group-hover:scale-150 transition-transform duration-700"></div>
-
-            <div className="relative p-6">
-              <CardHeader className="p-0 mb-4">
-                <div className="flex items-center justify-between">
-                  <div className="bg-gradient-to-br from-green-500 to-green-600 rounded-2xl p-3 shadow-lg">
-                    <ArrowDownLeft className="h-6 w-6 text-white" />
-                  </div>
-                  <div className="text-right">
-                    <CardTitle className="text-sm font-semibold text-gray-600">
-                      Incoming Transfers
-                    </CardTitle>
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent className="p-0">
-                <div className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">
-                  {transactions.filter((t) => t.to_user_id === user?.id).length}
-                </div>
-                <p className="text-sm text-gray-600">Money received</p>
-              </CardContent>
-            </div>
-          </Card>
-        </div>
-
-        {/* Transaction History - Professional Banking Design */}
+        {/* Transaction History */}
         <Card className="bg-white rounded-2xl shadow-xl overflow-hidden border-2 border-[#F26623]/10">
           <div className="bg-gradient-to-r from-[#F26623] to-[#E55A1F] p-6">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -599,13 +865,9 @@ export default function TransactionsPage() {
                   <CreditCard className="h-6 w-6 text-white" />
                 </div>
                 <div>
-                  <CardTitle className="text-lg sm:text-2xl font-bold text-white">
-                    Transaction History
-                  </CardTitle>
+                  <CardTitle className="text-lg sm:text-2xl font-bold text-white">Transaction History</CardTitle>
                   <CardDescription className="text-orange-100">
-                    <span className="hidden sm:inline">
-                      Complete record of all your banking transactions
-                    </span>
+                    <span className="hidden sm:inline">Complete record of all your banking transactions</span>
                     <span className="sm:hidden">Your transaction history</span>
                   </CardDescription>
                 </div>
@@ -659,8 +921,7 @@ export default function TransactionsPage() {
             ) : transactions.length > 0 ? (
               <div className="space-y-4">
                 {transactions.map((transaction) => {
-                  const { sign, colorClass, amount } =
-                    getTransactionAmount(transaction);
+                  const { sign, colorClass, amount } = getTransactionAmount(transaction)
 
                   return (
                     <div
@@ -673,26 +934,37 @@ export default function TransactionsPage() {
                             {getTransactionIcon(transaction)}
                           </div>
                           <div>
-                            <p className="font-bold text-gray-900 text-base sm:text-lg">
-                              {getTransactionDescription(transaction)}
-                            </p>
+                            <div className="flex items-center gap-2 mb-1">
+                              <p className="font-bold text-gray-900 text-base sm:text-lg">
+                                {getTransactionDescription(transaction)}
+                              </p>
+                              {getStatusBadge(transaction.status || "completed")}
+                            </div>
                             <div className="flex items-center space-x-2 mt-1">
                               <Clock className="h-4 w-4 text-gray-400" />
                               <p className="text-sm text-gray-600">
-                                {new Date(
-                                  transaction.created_at
-                                ).toLocaleString()}
+                                {new Date(transaction.created_at).toLocaleString()}
                               </p>
                             </div>
-                            <div className="bg-[#F26623]/10 text-[#F26623] px-3 py-1 rounded-full text-xs font-semibold inline-block mt-2">
-                              Transaction ID: {transaction.id.slice(0, 8)}...
+                            {transaction.transaction_subtype && (
+                              <div className="bg-[#F26623]/10 text-[#F26623] px-3 py-1 rounded-full text-xs font-semibold inline-block mt-2">
+                                {transaction.transaction_subtype === "inside_bank"
+                                  ? "Currency Conversion"
+                                  : transaction.transaction_subtype === "outside_bank"
+                                    ? "External Transfer"
+                                    : transaction.transaction_subtype}
+                              </div>
+                            )}
+                            {transaction.beneficiary_name && (
+                              <p className="text-xs text-gray-500 mt-1">To: {transaction.beneficiary_name}</p>
+                            )}
+                            <div className="bg-gray-100 text-gray-700 px-3 py-1 rounded-full text-xs font-semibold inline-block mt-2">
+                              ID: {transaction.id.slice(0, 8)}...
                             </div>
                           </div>
                         </div>
                         <div className="text-right sm:text-left">
-                          <p
-                            className={`text-xl sm:text-2xl font-bold ${colorClass} mb-1`}
-                          >
+                          <p className={`text-xl sm:text-2xl font-bold ${colorClass} mb-1`}>
                             {sign}
                             {amount}
                           </p>
@@ -701,14 +973,12 @@ export default function TransactionsPage() {
                           </div>
                           <div className="flex items-center justify-end sm:justify-start mt-2">
                             <Shield className="h-3 w-3 text-green-500 mr-1" />
-                            <span className="text-xs text-green-600 font-medium">
-                              Verified
-                            </span>
+                            <span className="text-xs text-green-600 font-medium">Verified</span>
                           </div>
                         </div>
                       </div>
                     </div>
-                  );
+                  )
                 })}
               </div>
             ) : (
@@ -716,18 +986,15 @@ export default function TransactionsPage() {
                 <div className="bg-gradient-to-br from-[#F26623]/10 to-[#E55A1F]/20 rounded-full w-32 h-32 flex items-center justify-center mx-auto mb-8">
                   <ArrowUpDown className="h-16 w-16 text-[#F26623]" />
                 </div>
-                <h3 className="text-xl sm:text-2xl font-bold text-gray-900 mb-4">
-                  No Transactions Yet
-                </h3>
+                <h3 className="text-xl sm:text-2xl font-bold text-gray-900 mb-4">No Transactions Yet</h3>
                 <p className="text-gray-600 mb-8 max-w-md mx-auto">
-                  Your transaction history will appear here once you start
-                  making transfers or deposits
+                  Your transaction history will appear here once you start making transfers, deposits, or withdrawals
                 </p>
                 <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
                   <DialogTrigger asChild>
                     <Button className="bg-gradient-to-r from-[#F26623] to-[#E55A1F] hover:from-[#E55A1F] hover:to-[#D94E1A] text-white font-semibold px-8 py-4 text-base sm:text-lg">
                       <Send className="h-5 w-5 mr-2" />
-                      Send Your First Transfer
+                      Start Your First Transaction
                     </Button>
                   </DialogTrigger>
                 </Dialog>
@@ -737,5 +1004,5 @@ export default function TransactionsPage() {
         </Card>
       </div>
     </DashboardLayout>
-  );
+  )
 }

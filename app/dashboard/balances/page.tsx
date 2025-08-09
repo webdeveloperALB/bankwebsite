@@ -1,26 +1,16 @@
-"use client";
+"use client"
 
-import { useEffect, useState } from "react";
-import { supabase } from "@/lib/supabase";
-import { getCurrentUser } from "@/lib/auth";
-import DashboardLayout from "@/components/dashboard-layout";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import type React from "react"
+
+import { useEffect, useState } from "react"
+import { supabase } from "@/lib/supabase"
+import { getCurrentUser } from "@/lib/auth"
+import DashboardLayout from "@/components/dashboard-layout"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import {
   Dialog,
   DialogContent,
@@ -28,20 +18,15 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from "@/components/ui/dialog";
-import { Plus, RefreshCw, Wallet, Globe } from "lucide-react";
-import { Database } from "@/lib/supabase";
-import {
-  convertCurrency,
-  subscribeToRateUpdates,
-  getCurrencyRate,
-  forceRateUpdate,
-} from "@/lib/exchange-rates";
+} from "@/components/ui/dialog"
+import { Plus, Wallet, Globe } from "lucide-react"
+import type { Database } from "@/lib/supabase"
+import { convertCurrency, subscribeToRateUpdates, getCurrencyRate, forceRateUpdate } from "@/lib/exchange-rates"
 
-type User = Database["public"]["Tables"]["users"]["Row"];
-type Balance = Database["public"]["Tables"]["balances"]["Row"];
+type User = Database["public"]["Tables"]["users"]["Row"]
+type Balance = Database["public"]["Tables"]["balances"]["Row"]
 
-const CURRENCIES = ["USD", "EUR", "GBP", "CAD", "AUD", "JPY", "CHF"];
+const CURRENCIES = ["USD", "EUR", "GBP", "CAD", "AUD", "JPY", "CHF"]
 
 const CURRENCY_FLAGS = {
   USD: "🇺🇸",
@@ -51,50 +36,50 @@ const CURRENCY_FLAGS = {
   AUD: "🇦🇺",
   JPY: "🇯🇵",
   CHF: "🇨🇭",
-};
+}
 
 export default function BalancesPage() {
-  const [user, setUser] = useState<User | null>(null);
-  const [balances, setBalances] = useState<Balance[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [refreshKey, setRefreshKey] = useState(0);
-  const [addingBalance, setAddingBalance] = useState(false);
-  const [newCurrency, setNewCurrency] = useState("");
-  const [newAmount, setNewAmount] = useState("");
-  const [dialogOpen, setDialogOpen] = useState(false);
+  const [user, setUser] = useState<User | null>(null)
+  const [balances, setBalances] = useState<Balance[]>([])
+  const [loading, setLoading] = useState(true)
+  const [refreshKey, setRefreshKey] = useState(0)
+  const [addingBalance, setAddingBalance] = useState(false)
+  const [newCurrency, setNewCurrency] = useState("")
+  const [newAmount, setNewAmount] = useState("")
+  const [dialogOpen, setDialogOpen] = useState(false)
 
   // Force re-render when exchange rates change
   const forceRerender = () => {
-    setRefreshKey((prev) => prev + 1);
-    console.log("🔄 Forcing UI re-render due to rate changes");
-  };
+    setRefreshKey((prev) => prev + 1)
+    console.log("🔄 Forcing UI re-render due to rate changes")
+  }
 
   useEffect(() => {
-    let exchangeRateUnsubscribe: (() => void) | null = null;
-    let supabaseChannel: any = null;
+    let exchangeRateUnsubscribe: (() => void) | null = null
+    let supabaseChannel: any = null
 
     const loadData = async () => {
       try {
-        console.log("📊 Loading balances data...");
+        console.log("📊 Loading balances data...")
 
         // Subscribe to real-time exchange rate updates
-        exchangeRateUnsubscribe = subscribeToRateUpdates(forceRerender);
-        console.log("📡 Subscribed to exchange rate updates");
+        exchangeRateUnsubscribe = subscribeToRateUpdates(forceRerender)
+        console.log("📡 Subscribed to exchange rate updates")
 
-        const currentUser = await getCurrentUser();
-        if (!currentUser) return;
+        const currentUser = await getCurrentUser()
+        if (!currentUser) return
 
-        setUser(currentUser);
+        setUser(currentUser)
 
         // Load balances
         const { data: balancesData } = await supabase
           .from("balances")
           .select("*")
           .eq("user_id", currentUser.id)
-          .order("currency");
+          .order("currency")
 
-        console.log("💰 Loaded balances:", balancesData);
-        setBalances(balancesData || []);
+        console.log("💰 Loaded balances:", balancesData)
+        setBalances(balancesData || [])
 
         // Set up real-time subscription for balance changes
         supabaseChannel = supabase
@@ -108,7 +93,7 @@ export default function BalancesPage() {
               filter: `user_id=eq.${currentUser.id}`,
             },
             (payload) => {
-              console.log("🔄 Balance change detected:", payload);
+              console.log("🔄 Balance change detected:", payload)
               // Reload balances
               supabase
                 .from("balances")
@@ -116,52 +101,99 @@ export default function BalancesPage() {
                 .eq("user_id", currentUser.id)
                 .order("currency")
                 .then(({ data }) => {
-                  console.log("💰 Reloaded balances:", data);
-                  setBalances(data || []);
-                });
-            }
+                  console.log("💰 Reloaded balances:", data)
+                  setBalances(data || [])
+                })
+            },
           )
-          .subscribe();
+          .subscribe()
       } catch (error) {
-        console.error("❌ Error loading balances:", error);
+        console.error("❌ Error loading balances:", error)
       } finally {
-        setLoading(false);
+        setLoading(false)
       }
-    };
+    }
 
-    loadData();
+    loadData()
 
     // Cleanup function
     return () => {
       if (exchangeRateUnsubscribe) {
-        exchangeRateUnsubscribe();
-        console.log("📡 Unsubscribed from exchange rate updates");
+        exchangeRateUnsubscribe()
+        console.log("📡 Unsubscribed from exchange rate updates")
       }
       if (supabaseChannel) {
-        supabase.removeChannel(supabaseChannel);
-        console.log("📡 Removed Supabase channel");
+        supabase.removeChannel(supabaseChannel)
+        console.log("📡 Removed Supabase channel")
       }
-    };
-  }, []);
+    }
+  }, [])
+
+  // Auto-refresh every 3 seconds instead of every second to reduce load
+  useEffect(() => {
+    if (!user) return
+
+    const interval = setInterval(async () => {
+      try {
+        // Reload balances from database with deduplication
+        const { data: balancesData } = await supabase
+          .from("balances")
+          .select("*")
+          .eq("user_id", user.id)
+          .order("currency")
+          .order("updated_at", { ascending: false })
+
+        if (balancesData) {
+          // Remove duplicates (same currency)
+          const uniqueBalances = balancesData.reduce((acc: Balance[], current) => {
+            const existing = acc.find((item) => item.currency === current.currency)
+            if (!existing) {
+              acc.push(current)
+            } else if (new Date(current.updated_at) > new Date(existing.updated_at)) {
+              // Replace with more recent entry
+              const index = acc.indexOf(existing)
+              acc[index] = current
+            }
+            return acc
+          }, [])
+
+          setBalances(uniqueBalances)
+        }
+      } catch (error) {
+        console.error("❌ Error auto-refreshing balances:", error)
+      }
+    }, 3000) // Refresh every 3 seconds
+
+    return () => clearInterval(interval)
+  }, [user])
 
   const handleAddBalance = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!user || !newCurrency || !newAmount) return;
+    e.preventDefault()
+    if (!user || !newCurrency || !newAmount) return
 
-    setAddingBalance(true);
+    setAddingBalance(true)
 
     try {
-      console.log(`💰 Adding ${newAmount} ${newCurrency} to balance`);
+      console.log(`💰 Adding ${newAmount} ${newCurrency} to balance`)
 
-      // Check if currency already exists
-      const existingBalance = balances.find((b) => b.currency === newCurrency);
+      // Check if currency already exists with more specific query
+      const { data: existingBalances, error: fetchError } = await supabase
+        .from("balances")
+        .select("*")
+        .eq("user_id", user.id)
+        .eq("currency", newCurrency)
+        .limit(1)
+
+      if (fetchError) throw fetchError
+
+      const existingBalance = existingBalances?.[0]
 
       if (existingBalance) {
         // Update existing balance
-        const newTotal = Number(existingBalance.amount) + Number(newAmount);
+        const newTotal = Number(existingBalance.amount) + Number(newAmount)
         console.log(
-          `💰 Updating existing ${newCurrency} balance: ${existingBalance.amount} + ${newAmount} = ${newTotal}`
-        );
+          `💰 Updating existing ${newCurrency} balance: ${existingBalance.amount} + ${newAmount} = ${newTotal}`,
+        )
 
         const { error } = await supabase
           .from("balances")
@@ -169,40 +201,52 @@ export default function BalancesPage() {
             amount: newTotal,
             updated_at: new Date().toISOString(),
           })
-          .eq("id", existingBalance.id);
+          .eq("id", existingBalance.id)
 
-        if (error) throw error;
+        if (error) throw error
       } else {
         // Create new balance
-        console.log(`💰 Creating new ${newCurrency} balance: ${newAmount}`);
+        console.log(`💰 Creating new ${newCurrency} balance: ${newAmount}`)
 
         const { error } = await supabase.from("balances").insert({
           user_id: user.id,
           currency: newCurrency,
           amount: Number(newAmount),
-        });
+        })
 
-        if (error) throw error;
+        if (error) throw error
       }
 
       // Log activity
       await supabase.from("activity_logs").insert({
         user_id: user.id,
         activity: `Added ${newAmount} ${newCurrency} to balance`,
-      });
+      })
 
-      setNewCurrency("");
-      setNewAmount("");
-      setDialogOpen(false);
+      setNewCurrency("")
+      setNewAmount("")
+      setDialogOpen(false)
 
       // Force rate update to ensure fresh calculations
-      forceRateUpdate();
+      forceRateUpdate()
+
+      // Immediately reload balances to reflect changes
+      const { data: updatedBalances } = await supabase
+        .from("balances")
+        .select("*")
+        .eq("user_id", user.id)
+        .order("currency")
+
+      if (updatedBalances) {
+        setBalances(updatedBalances)
+      }
     } catch (error) {
-      console.error("❌ Error adding balance:", error);
+      console.error("❌ Error adding balance:", error)
+      alert("Error adding balance. Please try again.")
     } finally {
-      setAddingBalance(false);
+      setAddingBalance(false)
     }
-  };
+  }
 
   return (
     <DashboardLayout currentSection="balances">
@@ -220,9 +264,7 @@ export default function BalancesPage() {
                   <Wallet className="h-8 w-8 text-white" />
                 </div>
                 <div>
-                  <h1 className="text-xl sm:text-3xl lg:text-4xl font-bold text-white mb-2">
-                    Currency Balances
-                  </h1>
+                  <h1 className="text-xl sm:text-3xl lg:text-4xl font-bold text-white mb-2">Currency Balances</h1>
                   <p className="text-orange-100 text-xs sm:text-base lg:text-lg font-medium">
                     Multi-currency portfolio with live exchange rates
                   </p>
@@ -230,19 +272,6 @@ export default function BalancesPage() {
               </div>
 
               <div className="flex flex-col sm:flex-row gap-3">
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    forceRateUpdate();
-                    forceRerender();
-                  }}
-                  className="bg-white/20 border-white/30 text-white hover:bg-white/30 hover:text-white backdrop-blur-sm"
-                >
-                  <RefreshCw className="h-4 w-4 mr-2" />
-                  <span className="hidden sm:inline">Refresh Rates</span>
-                  <span className="sm:hidden">Refresh</span>
-                </Button>
-
                 <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
                   <DialogTrigger asChild>
                     <Button className="bg-white text-[#F26623] hover:bg-gray-100 font-semibold shadow-lg">
@@ -253,25 +282,17 @@ export default function BalancesPage() {
                   </DialogTrigger>
                   <DialogContent className="sm:max-w-md">
                     <DialogHeader>
-                      <DialogTitle className="text-[#F26623] text-xl font-bold">
-                        Add Currency Balance
-                      </DialogTitle>
+                      <DialogTitle className="text-[#F26623] text-xl font-bold">Add Currency Balance</DialogTitle>
                       <DialogDescription className="text-gray-600">
                         Add funds to your account in any supported currency
                       </DialogDescription>
                     </DialogHeader>
                     <form onSubmit={handleAddBalance} className="space-y-6">
                       <div className="space-y-2">
-                        <Label
-                          htmlFor="currency"
-                          className="text-gray-700 font-semibold"
-                        >
+                        <Label htmlFor="currency" className="text-gray-700 font-semibold">
                           Currency
                         </Label>
-                        <Select
-                          value={newCurrency}
-                          onValueChange={setNewCurrency}
-                        >
+                        <Select value={newCurrency} onValueChange={setNewCurrency}>
                           <SelectTrigger className="border-[#F26623]/30 focus:border-[#F26623] focus:ring-[#F26623]/20">
                             <SelectValue placeholder="Select currency" />
                           </SelectTrigger>
@@ -279,17 +300,10 @@ export default function BalancesPage() {
                             {CURRENCIES.map((currency) => (
                               <SelectItem key={currency} value={currency}>
                                 <div className="flex items-center space-x-2">
-                                  <span>
-                                    {
-                                      CURRENCY_FLAGS[
-                                        currency as keyof typeof CURRENCY_FLAGS
-                                      ]
-                                    }
-                                  </span>
+                                  <span>{CURRENCY_FLAGS[currency as keyof typeof CURRENCY_FLAGS]}</span>
                                   <span>{currency}</span>
                                   <span className="text-gray-500 text-sm">
-                                    (Rate:{" "}
-                                    {getCurrencyRate(currency).toFixed(4)})
+                                    (Rate: {getCurrencyRate(currency).toFixed(4)})
                                   </span>
                                 </div>
                               </SelectItem>
@@ -298,10 +312,7 @@ export default function BalancesPage() {
                         </Select>
                       </div>
                       <div className="space-y-2">
-                        <Label
-                          htmlFor="amount"
-                          className="text-gray-700 font-semibold"
-                        >
+                        <Label htmlFor="amount" className="text-gray-700 font-semibold">
                           Amount
                         </Label>
                         <Input
@@ -317,13 +328,7 @@ export default function BalancesPage() {
                         {newAmount && newCurrency && newCurrency !== "USD" && (
                           <div className="bg-[#F26623]/5 border border-[#F26623]/20 rounded-lg p-3">
                             <p className="text-sm text-[#F26623] font-semibold">
-                              ≈ $
-                              {convertCurrency(
-                                Number(newAmount),
-                                newCurrency,
-                                "USD"
-                              ).toFixed(2)}{" "}
-                              USD
+                              ≈ ${convertCurrency(Number(newAmount), newCurrency, "USD").toFixed(2)} USD
                             </p>
                           </div>
                         )}
@@ -348,21 +353,15 @@ export default function BalancesPage() {
           <div className="mb-10">
             <div className="flex items-center justify-between mb-6">
               <div>
-                <h2 className="text-lg sm:text-3xl font-bold text-gray-900 mb-2">
-                  Your Currency Holdings
-                </h2>
+                <h2 className="text-lg sm:text-3xl font-bold text-gray-900 mb-2">Your Currency Holdings</h2>
                 <div className="w-24 h-1 bg-gradient-to-r from-[#F26623] to-[#E55A1F] rounded-full"></div>
               </div>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
               {balances.map((balance) => {
-                const usdValue = convertCurrency(
-                  Number(balance.amount),
-                  balance.currency,
-                  "USD"
-                );
-                const rate = getCurrencyRate(balance.currency);
+                const usdValue = convertCurrency(Number(balance.amount), balance.currency, "USD")
+                const rate = getCurrencyRate(balance.currency)
 
                 return (
                   <Card
@@ -377,20 +376,14 @@ export default function BalancesPage() {
                         <div className="flex items-center justify-between mb-4">
                           <div className="bg-gradient-to-br from-[#F26623] to-[#E55A1F] rounded-2xl p-3 shadow-lg">
                             <span className="text-white font-bold text-lg">
-                              {
-                                CURRENCY_FLAGS[
-                                  balance.currency as keyof typeof CURRENCY_FLAGS
-                                ]
-                              }
+                              {CURRENCY_FLAGS[balance.currency as keyof typeof CURRENCY_FLAGS]}
                             </span>
                           </div>
                           <div className="text-right">
                             <CardTitle className="text-lg sm:text-2xl font-bold text-gray-900">
                               {balance.currency}
                             </CardTitle>
-                            <p className="text-[#F26623] font-semibold text-sm">
-                              Currency
-                            </p>
+                            <p className="text-[#F26623] font-semibold text-sm">Currency</p>
                           </div>
                         </div>
                       </CardHeader>
@@ -403,9 +396,7 @@ export default function BalancesPage() {
                               maximumFractionDigits: 2,
                             })}
                           </p>
-                          <p className="text-gray-600 font-medium">
-                            {balance.currency}
-                          </p>
+                          <p className="text-gray-600 font-medium">{balance.currency}</p>
                         </div>
 
                         <div className="bg-gradient-to-r from-[#F26623] to-[#E55A1F] text-white px-4 py-2 rounded-full">
@@ -419,21 +410,18 @@ export default function BalancesPage() {
                         </div>
 
                         <div className="bg-[#F26623]/5 rounded-xl p-4 border border-[#F26623]/20">
-                          <p className="text-sm text-gray-600 mb-1">
-                            Exchange Rate
-                          </p>
+                          <p className="text-sm text-gray-600 mb-1">Exchange Rate</p>
                           <p className="text-[#F26623] font-bold text-sm">
                             1 USD = {rate.toFixed(4)} {balance.currency}
                           </p>
                           <p className="text-xs text-gray-400 mt-2">
-                            Updated{" "}
-                            {new Date(balance.updated_at).toLocaleDateString()}
+                            Updated {new Date(balance.updated_at).toLocaleDateString()}
                           </p>
                         </div>
                       </CardContent>
                     </div>
                   </Card>
-                );
+                )
               })}
             </div>
           </div>
@@ -447,12 +435,8 @@ export default function BalancesPage() {
                 <Globe className="h-6 w-6 text-white" />
               </div>
               <div>
-                <h3 className="text-lg sm:text-2xl font-bold text-white">
-                  Current Exchange Rates
-                </h3>
-                <p className="text-orange-100">
-                  Live rates updated every 2 minutes (1 USD = X)
-                </p>
+                <h3 className="text-lg sm:text-2xl font-bold text-white">Current Exchange Rates</h3>
+                <p className="text-orange-100">Live rates updated every 2 minutes (1 USD = X)</p>
               </div>
             </div>
           </div>
@@ -465,14 +449,10 @@ export default function BalancesPage() {
                   className="bg-gradient-to-br from-[#F26623]/5 to-[#E55A1F]/10 border-2 border-[#F26623]/20 rounded-xl p-4 hover:border-[#F26623]/40 transition-all duration-300"
                 >
                   <div className="flex items-center space-x-2 mb-2">
-                    <span className="text-lg">
-                      {CURRENCY_FLAGS[currency as keyof typeof CURRENCY_FLAGS]}
-                    </span>
+                    <span className="text-lg">{CURRENCY_FLAGS[currency as keyof typeof CURRENCY_FLAGS]}</span>
                     <div className="font-bold text-gray-900">{currency}</div>
                   </div>
-                  <div className="text-[#F26623] font-bold text-lg">
-                    {getCurrencyRate(currency).toFixed(4)}
-                  </div>
+                  <div className="text-[#F26623] font-bold text-lg">{getCurrencyRate(currency).toFixed(4)}</div>
                   <div className="text-xs text-gray-500 mt-1">per USD</div>
                 </div>
               ))}
@@ -486,12 +466,9 @@ export default function BalancesPage() {
             <div className="bg-gradient-to-br from-[#F26623]/10 to-[#E55A1F]/20 rounded-full w-32 h-32 flex items-center justify-center mx-auto mb-8">
               <Wallet className="h-16 w-16 text-[#F26623]" />
             </div>
-            <h3 className="text-xl font-bold text-gray-900 mb-4">
-              No Currency Balances Yet
-            </h3>
+            <h3 className="text-xl font-bold text-gray-900 mb-4">No Currency Balances Yet</h3>
             <p className="text-gray-600 mb-8 max-w-md mx-auto">
-              Start building your multi-currency portfolio by adding your first
-              balance
+              Start building your multi-currency portfolio by adding your first balance
             </p>
             <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
               <DialogTrigger asChild>
@@ -505,5 +482,5 @@ export default function BalancesPage() {
         )}
       </div>
     </DashboardLayout>
-  );
+  )
 }
