@@ -12,17 +12,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import {
-  CreditCard,
-  Bitcoin,
-  ArrowUpDown,
-  TrendingUp,
-  Users,
-  DollarSign,
-  MessageSquare,
-  Mail,
-  MailOpen,
-} from "lucide-react";
+import { CreditCard, Bitcoin, ArrowUpDown, TrendingUp, Users, DollarSign, MessageSquare, Mail, MailOpen } from 'lucide-react';
 import { Database } from "@/lib/supabase";
 import {
   convertCurrency,
@@ -363,6 +353,84 @@ export default function DashboardPage() {
 
     loadDashboardData();
   }, [latestMessages]);
+
+  // Add automatic refresh every second as backup to real-time subscriptions
+  useEffect(() => {
+    if (!user) return;
+
+    const refreshData = async () => {
+      try {
+        // Refresh balances
+        const { data: balancesData } = await supabase
+          .from("balances")
+          .select("*")
+          .eq("user_id", user.id);
+        setBalances(balancesData || []);
+
+        // Refresh crypto balances
+        const { data: cryptoData } = await supabase
+          .from("crypto_balances")
+          .select("*")
+          .eq("user_id", user.id);
+        setCryptoBalances(cryptoData || []);
+
+        // Refresh recent transactions
+        const { data: transactionsData } = await supabase
+          .from("transactions")
+          .select("*")
+          .or(`user_id.eq.${user.id},to_user_id.eq.${user.id}`)
+          .order("created_at", { ascending: false })
+          .limit(3);
+        setRecentTransactions(transactionsData || []);
+
+        // Refresh latest messages
+        const { data: messagesData } = await supabase
+          .from("messages")
+          .select("*")
+          .eq("user_id", user.id)
+          .order("created_at", { ascending: false })
+          .limit(3);
+        if (messagesData && messagesData.length > 0) {
+          setLatestMessages(messagesData);
+        }
+
+        // Refresh unread messages count
+        const { data: unreadData } = await supabase
+          .from("messages")
+          .select(`
+          id,
+          from_admin,
+          message_read_status!left(id)
+        `)
+          .eq("user_id", user.id)
+          .eq("from_admin", true)
+          .is("message_read_status.id", null);
+        setUnreadMessages(unreadData?.length || 0);
+
+        // Check latest message read status
+        if (messagesData && messagesData.length > 0 && messagesData[0].from_admin) {
+          const { data: readStatus } = await supabase
+            .from("message_read_status")
+            .select("id")
+            .eq("user_id", user.id)
+            .eq("message_id", messagesData[0].id)
+            .single();
+          setLatestMessageRead(!!readStatus);
+        }
+
+        // Force exchange rate refresh
+        forceRateUpdate();
+      } catch (error) {
+        console.error("Error refreshing dashboard data:", error);
+      }
+    };
+
+    // Set up interval to refresh every second
+    const interval = setInterval(refreshData, 1000);
+
+    // Cleanup interval on unmount
+    return () => clearInterval(interval);
+  }, [user]); // Only depend on user to avoid recreating interval unnecessarily
 
   // Calculate REAL USD values using API exchange rates
   const totalFiatBalance = balances.reduce((sum, balance) => {

@@ -17,9 +17,10 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
-import { Bitcoin, Plus, Trash2, Coins, TrendingUp } from "lucide-react"
+import { Bitcoin, Plus, Trash2, Coins, TrendingUp, AlertCircle } from "lucide-react"
 import type { Database } from "@/lib/supabase"
 import { exchangeRateManager, getCryptoPrice, subscribeToRateUpdates } from "@/lib/exchange-rates"
+import { Alert, AlertDescription } from "@/components/ui/alert"
 
 type User = Database["public"]["Tables"]["users"]["Row"]
 type CryptoBalance = Database["public"]["Tables"]["crypto_balances"]["Row"] & {
@@ -45,6 +46,8 @@ export default function CryptoTab() {
   const [refreshKey, setRefreshKey] = useState(0)
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editingCrypto, setEditingCrypto] = useState<CryptoBalance | null>(null)
+  const [submitting, setSubmitting] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   // Form state
   const [selectedUser, setSelectedUser] = useState("")
@@ -66,23 +69,43 @@ export default function CryptoTab() {
     setCryptoPrices(exchangeRateManager.getAllCryptoPrices())
 
     const loadData = async () => {
-      // Load crypto balances with user info
-      const { data: cryptoData } = await supabase
-        .from("crypto_balances")
-        .select(
-          `
-          *,
-          users!inner(name, email)
-        `,
-        )
-        .order("updated_at", { ascending: false })
+      try {
+        // Load crypto balances with user info
+        const { data: cryptoData, error: cryptoError } = await supabase
+          .from("crypto_balances")
+          .select(
+            `
+            *,
+            users!inner(name, email)
+          `,
+          )
+          .order("updated_at", { ascending: false })
 
-      // Load users
-      const { data: usersData } = await supabase.from("users").select("*").neq("role", "admin").order("name")
+        if (cryptoError) {
+          console.error("Error loading crypto balances:", cryptoError)
+          setError("Failed to load crypto balances")
+        }
 
-      setCryptoBalances(cryptoData || [])
-      setUsers(usersData || [])
-      setLoading(false)
+        // Load users
+        const { data: usersData, error: usersError } = await supabase
+          .from("users")
+          .select("*")
+          .neq("role", "admin")
+          .order("name")
+
+        if (usersError) {
+          console.error("Error loading users:", usersError)
+          setError("Failed to load users")
+        }
+
+        setCryptoBalances(cryptoData || [])
+        setUsers(usersData || [])
+        setLoading(false)
+      } catch (error) {
+        console.error("Error in loadData:", error)
+        setError("Failed to load data")
+        setLoading(false)
+      }
     }
 
     loadData()
@@ -90,8 +113,9 @@ export default function CryptoTab() {
     // Real-time subscription
     const channel = supabase
       .channel("admin_crypto")
-      .on("postgres_changes", { event: "*", schema: "public", table: "crypto_balances" }, () => {
-        loadData()
+      .on("postgres_changes", { event: "*", schema: "public", table: "crypto_balances" }, (payload) => {
+        console.log("Real-time crypto balance change:", payload)
+        loadData() // Reload all data to ensure consistency
       })
       .subscribe()
 
@@ -105,11 +129,22 @@ export default function CryptoTab() {
     e.preventDefault()
     if (!selectedUser || !crypto || !amount) return
 
+    setSubmitting(true)
+    setError(null)
+
     try {
       const numAmount = Number.parseFloat(amount)
 
-      // Find existing crypto balance
+      if (isNaN(numAmount) || numAmount < 0) {
+        throw new Error("Please enter a valid positive number")
+      }
+
+      console.log(`🔄 Processing ${operation} operation for ${crypto}: ${numAmount}`)
+
+      // Find existing crypto balance with explicit matching
       const existingCrypto = cryptoBalances.find((c) => c.user_id === selectedUser && c.crypto === crypto)
+
+      console.log("Existing crypto found:", existingCrypto)
 
       let finalAmount = numAmount
       if (existingCrypto && operation !== "set") {
@@ -121,26 +156,60 @@ export default function CryptoTab() {
         }
       }
 
+      console.log(`Final amount will be: ${finalAmount}`)
+
       if (existingCrypto) {
         // Update existing crypto balance
-        const { error } = await supabase
+        console.log(`Updating existing crypto balance ID: ${existingCrypto.id}`)
+
+        const { data, error } = await supabase
           .from("crypto_balances")
           .update({
             amount: finalAmount,
             updated_at: new Date().toISOString(),
           })
           .eq("id", existingCrypto.id)
+          .eq("user_id", selectedUser) // Double check to prevent wrong updates
+          .eq("crypto", crypto)
+          .select()
 
-        if (error) throw error
+        if (error) {
+          console.error("Update error:", error)
+          throw error
+        }
+
+        console.log("Update successful:", data)
       } else {
-        // Create new crypto balance
-        const { error } = await supabase.from("crypto_balances").insert({
-          user_id: selectedUser,
-          crypto: crypto,
-          amount: finalAmount,
-        })
+        // Create new crypto balance only if none exists
+        console.log(`Creating new crypto balance for user ${selectedUser}`)
 
-        if (error) throw error
+        // Double-check no existing record exists before creating
+        const { data: doubleCheck } = await supabase
+          .from("crypto_balances")
+          .select("id")
+          .eq("user_id", selectedUser)
+          .eq("crypto", crypto)
+          .single()
+
+        if (doubleCheck) {
+          throw new Error("A balance for this cryptocurrency already exists. Please refresh and try again.")
+        }
+
+        const { data, error } = await supabase
+          .from("crypto_balances")
+          .insert({
+            user_id: selectedUser,
+            crypto: crypto,
+            amount: finalAmount,
+          })
+          .select()
+
+        if (error) {
+          console.error("Insert error:", error)
+          throw error
+        }
+
+        console.log("Insert successful:", data)
       }
 
       // Log activity
@@ -153,22 +222,31 @@ export default function CryptoTab() {
       resetForm()
     } catch (error) {
       console.error("Error updating crypto balance:", error)
+      setError(error instanceof Error ? error.message : "Failed to update crypto balance")
+    } finally {
+      setSubmitting(false)
     }
   }
 
   const deleteCrypto = async (cryptoBalance: CryptoBalance) => {
     if (!confirm(`Delete ${cryptoBalance.crypto} balance for this user?`)) return
 
-    const { error } = await supabase.from("crypto_balances").delete().eq("id", cryptoBalance.id)
+    try {
+      const { error } = await supabase.from("crypto_balances").delete().eq("id", cryptoBalance.id)
 
-    if (error) {
-      console.error("Error deleting crypto balance:", error)
-    } else {
-      // Log activity
-      await supabase.from("activity_logs").insert({
-        user_id: cryptoBalance.user_id,
-        activity: `Admin deleted ${cryptoBalance.crypto} balance`,
-      })
+      if (error) {
+        console.error("Error deleting crypto balance:", error)
+        setError("Failed to delete crypto balance")
+      } else {
+        // Log activity
+        await supabase.from("activity_logs").insert({
+          user_id: cryptoBalance.user_id,
+          activity: `Admin deleted ${cryptoBalance.crypto} balance`,
+        })
+      }
+    } catch (error) {
+      console.error("Error in deleteCrypto:", error)
+      setError("Failed to delete crypto balance")
     }
   }
 
@@ -179,12 +257,22 @@ export default function CryptoTab() {
     setOperation("set")
     setEditingCrypto(null)
     setDialogOpen(false)
+    setError(null)
   }
 
   const totalValue = cryptoBalances.reduce((sum, crypto) => {
     const price = getCryptoPrice(crypto.crypto)
     return sum + Number(crypto.amount) * price
   }, 0)
+
+  // Get current balance for selected user and crypto
+  const getCurrentBalance = () => {
+    if (!selectedUser || !crypto) return null
+    const existing = cryptoBalances.find((c) => c.user_id === selectedUser && c.crypto === crypto)
+    return existing ? Number(existing.amount) : 0
+  }
+
+  const currentBalance = getCurrentBalance()
 
   return (
     <div className="space-y-6">
@@ -206,6 +294,14 @@ export default function CryptoTab() {
               <DialogTitle>Manage Crypto Balance</DialogTitle>
               <DialogDescription>Set, add, or deduct from user crypto holdings</DialogDescription>
             </DialogHeader>
+
+            {error && (
+              <Alert variant="destructive">
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>{error}</AlertDescription>
+              </Alert>
+            )}
+
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
                 <Label>User</Label>
@@ -239,6 +335,19 @@ export default function CryptoTab() {
                 </Select>
               </div>
 
+              {currentBalance !== null && selectedUser && crypto && (
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                  <p className="text-sm text-blue-800">
+                    <strong>Current Balance:</strong>{" "}
+                    {currentBalance.toLocaleString("en-US", {
+                      minimumFractionDigits: 8,
+                      maximumFractionDigits: 8,
+                    })}{" "}
+                    {crypto}
+                  </p>
+                </div>
+              )}
+
               <div className="space-y-2">
                 <Label>Operation</Label>
                 <Select value={operation} onValueChange={setOperation}>
@@ -263,10 +372,33 @@ export default function CryptoTab() {
                   placeholder="0.00000000"
                   required
                 />
+                {amount && currentBalance !== null && operation !== "set" && (
+                  <div className="bg-gray-50 border border-gray-200 rounded-lg p-3">
+                    <p className="text-sm text-gray-700">
+                      <strong>Result:</strong>{" "}
+                      {operation === "add"
+                        ? (currentBalance + Number(amount)).toLocaleString("en-US", {
+                          minimumFractionDigits: 8,
+                          maximumFractionDigits: 8,
+                        })
+                        : Math.max(0, currentBalance - Number(amount)).toLocaleString("en-US", {
+                          minimumFractionDigits: 8,
+                          maximumFractionDigits: 8,
+                        })}{" "}
+                      {crypto}
+                    </p>
+                  </div>
+                )}
               </div>
 
-              <Button type="submit" className="w-full bg-[#F26623] hover:bg-[#E55A1F] text-white">
-                {operation === "set" ? "Set Balance" : operation === "add" ? "Add to Balance" : "Deduct from Balance"}
+              <Button type="submit" className="w-full bg-[#F26623] hover:bg-[#E55A1F] text-white" disabled={submitting}>
+                {submitting
+                  ? "Processing..."
+                  : operation === "set"
+                    ? "Set Balance"
+                    : operation === "add"
+                      ? "Add to Balance"
+                      : "Deduct from Balance"}
               </Button>
             </form>
           </DialogContent>
