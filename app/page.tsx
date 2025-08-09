@@ -47,8 +47,8 @@ export default function HomePage() {
           <div className="flex justify-between items-center h-24">
             <div className="flex items-center space-x-3">
               <Image
-                src="/anchor3.svg"
-                alt="SecureBank Logo"
+                src="/anchor2.png"
+                alt="Anchor Group Investments Logo"
                 width={160}
                 height={140}
                 className="h-50 w-50"
@@ -86,9 +86,10 @@ export default function HomePage() {
                 </div>
               </div>
               <p className="text-xl text-gray-600 mb-8 leading-relaxed">
-                Experience next-generation banking with real-time transactions,
-                comprehensive security, and personalized financial solutions.
-                Built for individuals and businesses who demand excellence.
+                Regulated digital banking for individuals and businesses. Open
+                domestic and multi-currency accounts, send and receive payments
+                in seconds, reconcile automatically, and monitor risk in real
+                time—backed by audited controls and 24/7 support.
               </p>
               <div className="flex flex-col sm:flex-row gap-4">
                 <Button
@@ -110,25 +111,23 @@ export default function HomePage() {
             </div>
             <div className="hidden lg:block">
               <div className="bg-gradient-to-br from-[#F26623] to-[#E55A1F] rounded-2xl p-8 text-white">
-                <h3 className="text-2xl font-bold mb-4">
-                  Why Choose AGI?
-                </h3>
+                <h3 className="text-2xl font-bold mb-4">Why Choose AGI?</h3>
                 <ul className="space-y-3">
                   <li className="flex items-center">
                     <Shield className="h-5 w-5 mr-3" />
-                    Bank-grade security & encryption
+                    Regulated security with encryption, access controls, and fraud monitoring
                   </li>
                   <li className="flex items-center">
                     <Zap className="h-5 w-5 mr-3" />
-                    Instant real-time transactions
+                    Instant payments with real-time balances and notifications
                   </li>
                   <li className="flex items-center">
                     <Globe className="h-5 w-5 mr-3" />
-                    Global multi-currency support
+                    Multi-currency accounts, transparent FX, and global transfers
                   </li>
                   <li className="flex items-center">
                     <Clock className="h-5 w-5 mr-3" />
-                    24/7 customer support
+                    24/7 client support with priority routing for business users
                   </li>
                 </ul>
               </div>
@@ -145,9 +144,9 @@ export default function HomePage() {
               Professional Banking Solutions
             </h2>
             <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-              Comprehensive financial services designed for modern banking
-              needs, backed by cutting-edge technology and unwavering security
-              standards.
+              Accounts, payments, FX, and security delivered through a single,
+              reliable platform. Built for founders, finance teams, and
+              individuals who need speed, clarity, and control.
             </p>
           </div>
 
@@ -163,8 +162,8 @@ export default function HomePage() {
                   Real-Time Processing
                 </CardTitle>
                 <CardDescription className="text-gray-600 mt-2">
-                  Lightning-fast transactions with instant balance updates and
-                  real-time notifications
+                  Send and settle payments in seconds. Statements and exports
+                  update instantly with receipts and smart alerts.
                 </CardDescription>
               </CardHeader>
             </Card>
@@ -180,8 +179,8 @@ export default function HomePage() {
                   Global Banking
                 </CardTitle>
                 <CardDescription className="text-gray-600 mt-2">
-                  Multi-currency accounts with competitive exchange rates and
-                  international transfers
+                  Hold multiple currencies, access competitive FX, and pay
+                  partners and teams across borders with predictable costs.
                 </CardDescription>
               </CardHeader>
             </Card>
@@ -197,8 +196,8 @@ export default function HomePage() {
                   Advanced Security
                 </CardTitle>
                 <CardDescription className="text-gray-600 mt-2">
-                  Military-grade encryption, biometric authentication, and fraud
-                  protection systems
+                  Encryption at rest and in transit, biometric/passkey
+                  authentication, device verification, and continuous anomaly detection.
                 </CardDescription>
               </CardHeader>
             </Card>
@@ -214,8 +213,8 @@ export default function HomePage() {
                   24/7 Support
                 </CardTitle>
                 <CardDescription className="text-gray-600 mt-2">
-                  Round-the-clock customer service with dedicated relationship
-                  managers
+                  Speak with a specialist anytime. Most cases are resolved on
+                  first contact with proactive status updates.
                 </CardDescription>
               </CardHeader>
             </Card>
@@ -234,19 +233,19 @@ export default function HomePage() {
               <div className="text-3xl font-bold text-[#F26623] mb-2">
                 500K+
               </div>
-              <div className="text-gray-600">Active Customers</div>
+              <div className="text-gray-600">Clients served globally</div>
             </div>
             <div className="bg-gray-50 p-6 rounded-lg">
               <div className="text-3xl font-bold text-[#F26623] mb-2">
                 $2.5B+
               </div>
-              <div className="text-gray-600">Assets Under Management</div>
+              <div className="text-gray-600">Client assets under protection</div>
             </div>
             <div className="bg-gray-50 p-6 rounded-lg">
               <div className="text-3xl font-bold text-[#F26623] mb-2">
                 99.9%
               </div>
-              <div className="text-gray-600">Uptime Guarantee</div>
+              <div className="text-gray-600">Uptime measured over the last 12 months</div>
             </div>
           </div>
         </div>
@@ -256,11 +255,11 @@ export default function HomePage() {
       <div className="py-16 lg:py-24 bg-gradient-to-r from-[#F26623] to-[#E55A1F]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <h2 className="text-3xl lg:text-4xl font-bold text-white mb-4">
-            Ready to Experience Professional Banking?
+            Banking you can run a business on
           </h2>
           <p className="text-xl text-orange-100 mb-8 max-w-2xl mx-auto">
-            Join thousands of satisfied customers who have chosen SecureBank for
-            their financial success. Start your journey today.
+            Join individuals and companies that use AGI to move money faster,
+            manage risk, and operate globally with confidence.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Button
@@ -290,7 +289,7 @@ export default function HomePage() {
             <div className="flex items-center space-x-3 mb-4 md:mb-0">
               <Image
                 src="/anchor2_white.svg"
-                alt="SecureBank"
+                alt="Anchor Group Investments"
                 width={50}
                 height={50}
                 className="h-44 w-64"

@@ -172,7 +172,7 @@ export default function DashboardLayout({
           {/* Image replaces spinner */}
           <div className="relative">
             <Image
-              src="/anchor3.svg"
+              src="/anchor2.png"
               alt="Loading"
               width={250}
               height={0}

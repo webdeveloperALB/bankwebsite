@@ -1,18 +1,14 @@
-"use client";
+"use client"
 
-import { useState, useEffect, useRef } from "react";
-import { supabase } from "@/lib/supabase";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
+import type React from "react"
+
+import { useState, useEffect, useRef } from "react"
+import { supabase } from "@/lib/supabase"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Textarea } from "@/components/ui/textarea"
 import {
   MessageSquare,
   Send,
@@ -23,49 +19,44 @@ import {
   CheckCircle,
   Users,
   Mail,
-  Phone,
   RefreshCw,
   ArrowLeft,
-  X,
-} from "lucide-react";
-import { Database } from "@/lib/supabase";
+} from "lucide-react"
+import type { Database } from "@/lib/supabase"
 
-type User = Database["public"]["Tables"]["users"]["Row"];
+type User = Database["public"]["Tables"]["users"]["Row"]
 type Message = Database["public"]["Tables"]["messages"]["Row"] & {
-  users?: { name: string; email: string };
-};
-
-interface AdminMessagesPageProps {
-  activeTab: string;
-  onTabChange: (tab: string) => void;
+  users?: { name: string; email: string }
 }
 
-export default function AdminMessagesPage({
-  activeTab,
-  onTabChange,
-}: AdminMessagesPageProps) {
-  const [messages, setMessages] = useState<Message[]>([]);
-  const [users, setUsers] = useState<User[]>([]);
-  const [filteredUsers, setFilteredUsers] = useState<User[]>([]);
-  const [selectedUser, setSelectedUser] = useState<User | null>(null);
-  const [userMessages, setUserMessages] = useState<Message[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const [sending, setSending] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [newMessage, setNewMessage] = useState("");
-  const [autoRefreshEnabled, setAutoRefreshEnabled] = useState(true);
-  const [showMobileChat, setShowMobileChat] = useState(false);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
-  const autoRefreshIntervalRef = useRef<NodeJS.Timeout | null>(null);
+interface AdminMessagesPageProps {
+  activeTab: string
+  onTabChange: (tab: string) => void
+}
+
+export default function AdminMessagesPage({ activeTab, onTabChange }: AdminMessagesPageProps) {
+  const [messages, setMessages] = useState<Message[]>([])
+  const [users, setUsers] = useState<User[]>([])
+  const [filteredUsers, setFilteredUsers] = useState<User[]>([])
+  const [selectedUser, setSelectedUser] = useState<User | null>(null)
+  const [userMessages, setUserMessages] = useState<Message[]>([])
+  const [loading, setLoading] = useState(true)
+  const [refreshing, setRefreshing] = useState(false)
+  const [sending, setSending] = useState(false)
+  const [searchQuery, setSearchQuery] = useState("")
+  const [newMessage, setNewMessage] = useState("")
+  const [autoRefreshEnabled, setAutoRefreshEnabled] = useState(true)
+  const [showMobileChat, setShowMobileChat] = useState(false)
+  const messagesEndRef = useRef<HTMLDivElement>(null)
+  const autoRefreshIntervalRef = useRef<NodeJS.Timeout | null>(null)
 
   const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  };
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
+  }
 
   const loadMessages = async (silent = false) => {
     try {
-      if (!silent) console.log("📨 Admin loading messages...");
+      if (!silent) console.log("📨 Admin loading messages...")
 
       const { data: messagesData } = await supabase
         .from("messages")
@@ -73,130 +64,120 @@ export default function AdminMessagesPage({
           `
           *,
           users!inner(name, email)
-        `
+        `,
         )
-        .order("created_at", { ascending: true });
+        .order("created_at", { ascending: true })
 
-      if (!silent)
-        console.log("📨 Admin loaded messages:", messagesData?.length);
+      if (!silent) console.log("📨 Admin loaded messages:", messagesData?.length)
 
       // Only update if there are actual changes to prevent unnecessary re-renders
       setMessages((prevMessages) => {
-        if (
-          JSON.stringify(prevMessages) !== JSON.stringify(messagesData || [])
-        ) {
-          return messagesData || [];
+        if (JSON.stringify(prevMessages) !== JSON.stringify(messagesData || [])) {
+          return messagesData || []
         }
-        return prevMessages;
-      });
+        return prevMessages
+      })
 
-      return messagesData || [];
+      return messagesData || []
     } catch (error) {
-      if (!silent) console.error("❌ Error loading messages:", error);
-      return [];
+      if (!silent) console.error("❌ Error loading messages:", error)
+      return []
     }
-  };
+  }
 
   const loadUsers = async (silent = false) => {
     try {
-      if (!silent) console.log("👥 Admin loading users...");
+      if (!silent) console.log("👥 Admin loading users...")
 
-      const { data: usersData } = await supabase
-        .from("users")
-        .select("*")
-        .neq("role", "admin")
-        .order("name");
+      const { data: usersData } = await supabase.from("users").select("*").neq("role", "admin").order("name")
 
-      if (!silent) console.log("👥 Admin loaded users:", usersData?.length);
+      if (!silent) console.log("👥 Admin loaded users:", usersData?.length)
 
-      setUsers(usersData || []);
-      setFilteredUsers(usersData || []);
-      return usersData || [];
+      setUsers(usersData || [])
+      setFilteredUsers(usersData || [])
+      return usersData || []
     } catch (error) {
-      if (!silent) console.error("❌ Error loading users:", error);
-      return [];
+      if (!silent) console.error("❌ Error loading users:", error)
+      return []
     }
-  };
+  }
 
   // Auto-refresh function (silent to avoid spam logs)
   const autoRefresh = async () => {
-    if (!autoRefreshEnabled) return;
+    if (!autoRefreshEnabled) return
 
     try {
-      await Promise.all([loadMessages(true), loadUsers(true)]);
+      await Promise.all([loadMessages(true), loadUsers(true)])
     } catch (error) {
-      console.error("❌ Auto-refresh failed:", error);
+      console.error("❌ Auto-refresh failed:", error)
     }
-  };
+  }
 
   // Manual refresh function
   const handleRefresh = async () => {
-    setRefreshing(true);
-    console.log("🔄 Admin manually refreshing messages...");
+    setRefreshing(true)
+    console.log("🔄 Admin manually refreshing messages...")
 
     try {
-      await Promise.all([loadMessages(false), loadUsers(false)]);
-      console.log("✅ Admin refresh completed");
+      await Promise.all([loadMessages(false), loadUsers(false)])
+      console.log("✅ Admin refresh completed")
     } catch (error) {
-      console.error("❌ Admin refresh failed:", error);
+      console.error("❌ Admin refresh failed:", error)
     } finally {
-      setRefreshing(false);
+      setRefreshing(false)
     }
-  };
+  }
 
   // Toggle auto-refresh
   const toggleAutoRefresh = () => {
-    setAutoRefreshEnabled(!autoRefreshEnabled);
-    console.log(
-      "🔄 Admin auto-refresh:",
-      !autoRefreshEnabled ? "ENABLED" : "DISABLED"
-    );
-  };
+    setAutoRefreshEnabled(!autoRefreshEnabled)
+    console.log("🔄 Admin auto-refresh:", !autoRefreshEnabled ? "ENABLED" : "DISABLED")
+  }
 
   // Mobile chat handlers
   const handleUserSelect = (user: User) => {
-    setSelectedUser(user);
-    setShowMobileChat(true);
-  };
+    setSelectedUser(user)
+    setShowMobileChat(true)
+  }
 
   const handleBackToUsers = () => {
-    setShowMobileChat(false);
-    setSelectedUser(null);
-  };
+    setShowMobileChat(false)
+    setSelectedUser(null)
+  }
 
   useEffect(() => {
     const initializeData = async () => {
-      setLoading(true);
-      await Promise.all([loadMessages(false), loadUsers(false)]);
-      setLoading(false);
-    };
+      setLoading(true)
+      await Promise.all([loadMessages(false), loadUsers(false)])
+      setLoading(false)
+    }
 
-    initializeData();
-  }, []);
+    initializeData()
+  }, [])
 
   // Auto-refresh every second
   useEffect(() => {
     if (autoRefreshEnabled) {
-      console.log("🔄 Admin starting auto-refresh every 1 second");
-      autoRefreshIntervalRef.current = setInterval(autoRefresh, 1000);
+      console.log("🔄 Admin starting auto-refresh every 1 second")
+      autoRefreshIntervalRef.current = setInterval(autoRefresh, 1000)
     } else {
       if (autoRefreshIntervalRef.current) {
-        clearInterval(autoRefreshIntervalRef.current);
-        autoRefreshIntervalRef.current = null;
+        clearInterval(autoRefreshIntervalRef.current)
+        autoRefreshIntervalRef.current = null
       }
     }
 
     return () => {
       if (autoRefreshIntervalRef.current) {
-        clearInterval(autoRefreshIntervalRef.current);
-        autoRefreshIntervalRef.current = null;
+        clearInterval(autoRefreshIntervalRef.current)
+        autoRefreshIntervalRef.current = null
       }
-    };
-  }, [autoRefreshEnabled]);
+    }
+  }, [autoRefreshEnabled])
 
   // Real-time subscription as backup
   useEffect(() => {
-    console.log("📡 Admin setting up real-time subscription as backup...");
+    console.log("📡 Admin setting up real-time subscription as backup...")
 
     const messagesChannel = supabase
       .channel("admin_messages_backup", {
@@ -213,101 +194,121 @@ export default function AdminMessagesPage({
           table: "messages",
         },
         async (payload) => {
-          console.log("🔄 Admin real-time backup update:", payload.eventType);
+          console.log("🔄 Admin real-time backup update:", payload.eventType)
           // Just trigger a refresh instead of complex logic
-          await autoRefresh();
-        }
+          await autoRefresh()
+        },
       )
       .subscribe((status) => {
-        console.log("📡 Admin backup subscription status:", status);
-      });
+        console.log("📡 Admin backup subscription status:", status)
+      })
 
     return () => {
-      console.log("🔌 Admin cleaning up backup subscription...");
-      supabase.removeChannel(messagesChannel);
-    };
-  }, []);
+      console.log("🔌 Admin cleaning up backup subscription...")
+      supabase.removeChannel(messagesChannel)
+    }
+  }, [])
+
+  // Auto-select user with latest message
+  useEffect(() => {
+    if (!loading && messages.length > 0 && users.length > 0 && !selectedUser) {
+      // Find the most recent message
+      const sortedMessages = [...messages].sort(
+        (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
+      )
+
+      if (sortedMessages.length > 0) {
+        const latestMessageUserId = sortedMessages[0].user_id
+        const latestUser = users.find((user) => user.id === latestMessageUserId)
+
+        if (latestUser) {
+          console.log("🎯 Auto-selecting user with latest message:", latestUser.name)
+          setSelectedUser(latestUser)
+          // On mobile, also show the chat
+          if (window.innerWidth < 1024) {
+            setShowMobileChat(true)
+          }
+        }
+      }
+    }
+  }, [loading, messages, users, selectedUser])
 
   // Filter user messages when selected user changes
   useEffect(() => {
     if (selectedUser) {
-      const filtered = messages.filter((m) => m.user_id === selectedUser.id);
-      setUserMessages(filtered);
-      setTimeout(scrollToBottom, 100);
+      const filtered = messages.filter((m) => m.user_id === selectedUser.id)
+      setUserMessages(filtered)
+      setTimeout(scrollToBottom, 100)
     }
-  }, [selectedUser, messages]);
+  }, [selectedUser, messages])
 
   // Filter users based on search query
   useEffect(() => {
     if (searchQuery.trim() === "") {
-      setFilteredUsers(users);
+      setFilteredUsers(users)
     } else {
       const filtered = users.filter(
         (user) =>
           user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          user.email.toLowerCase().includes(searchQuery.toLowerCase())
-      );
-      setFilteredUsers(filtered);
+          user.email.toLowerCase().includes(searchQuery.toLowerCase()),
+      )
+      setFilteredUsers(filtered)
     }
-  }, [searchQuery, users]);
+  }, [searchQuery, users])
 
   const sendMessage = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!selectedUser || !newMessage.trim()) return;
+    e.preventDefault()
+    if (!selectedUser || !newMessage.trim()) return
 
-    setSending(true);
-    console.log("📤 Admin sending message to:", selectedUser.name);
+    setSending(true)
+    console.log("📤 Admin sending message to:", selectedUser.name)
 
     try {
       const messageData = {
         user_id: selectedUser.id,
         from_admin: true,
         message: newMessage.trim(),
-      };
+      }
 
-      const { data, error } = await supabase
-        .from("messages")
-        .insert(messageData)
-        .select()
-        .single();
+      const { data, error } = await supabase.from("messages").insert(messageData).select().single()
 
-      if (error) throw error;
+      if (error) throw error
 
-      console.log("✅ Admin message sent successfully:", data);
+      console.log("✅ Admin message sent successfully:", data)
 
       // Log activity
       await supabase.from("activity_logs").insert({
         user_id: selectedUser.id,
         activity: `Received admin message`,
-      });
+      })
 
-      setNewMessage("");
+      setNewMessage("")
 
       // Force immediate refresh after sending
       setTimeout(() => {
-        autoRefresh();
-        scrollToBottom();
-      }, 100);
+        autoRefresh()
+        scrollToBottom()
+      }, 100)
     } catch (error) {
-      console.error("❌ Error sending admin message:", error);
-      alert("Failed to send message. Please try again.");
+      console.error("❌ Error sending admin message:", error)
+      alert("Failed to send message. Please try again.")
     } finally {
-      setSending(false);
+      setSending(false)
     }
-  };
+  }
 
   const getUserMessageCount = (userId: string) => {
-    return messages.filter((m) => m.user_id === userId).length;
-  };
+    return messages.filter((m) => m.user_id === userId).length
+  }
 
   const getLastMessage = (userId: string) => {
-    const userMsgs = messages.filter((m) => m.user_id === userId);
-    return userMsgs[userMsgs.length - 1];
-  };
+    const userMsgs = messages.filter((m) => m.user_id === userId)
+    return userMsgs[userMsgs.length - 1]
+  }
 
   const getUnreadCount = (userId: string) => {
-    return messages.filter((m) => m.user_id === userId && !m.from_admin).length;
-  };
+    return messages.filter((m) => m.user_id === userId && !m.from_admin).length
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-orange-50 to-amber-50">
@@ -328,9 +329,7 @@ export default function AdminMessagesPage({
                   Customer Support Chat
                 </h1>
                 <p className="text-orange-100 text-xs sm:text-sm md:text-base lg:text-lg font-medium">
-                  <span className="hidden sm:inline">
-                    Real-time messaging with auto-refresh every second
-                  </span>
+                  <span className="hidden sm:inline">Real-time messaging with auto-refresh every second</span>
                   <span className="sm:hidden">Live chat support</span>
                 </p>
               </div>
@@ -341,27 +340,19 @@ export default function AdminMessagesPage({
               {/* Auto-refresh toggle */}
               <Button
                 onClick={toggleAutoRefresh}
-                className={`${
-                  autoRefreshEnabled
+                className={`${autoRefreshEnabled
                     ? "bg-green-500/20 hover:bg-green-500/30 text-green-100 border-green-300/30"
                     : "bg-red-500/20 hover:bg-red-500/30 text-red-100 border-red-300/30"
-                } backdrop-blur-sm text-xs sm:text-sm px-2 sm:px-3 py-1 sm:py-2`}
+                  } backdrop-blur-sm text-xs sm:text-sm px-2 sm:px-3 py-1 sm:py-2`}
                 variant="outline"
                 size="sm"
               >
                 <div
-                  className={`w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full mr-1 sm:mr-2 ${
-                    autoRefreshEnabled
-                      ? "bg-green-400 animate-pulse"
-                      : "bg-red-400"
-                  }`}
+                  className={`w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full mr-1 sm:mr-2 ${autoRefreshEnabled ? "bg-green-400 animate-pulse" : "bg-red-400"
+                    }`}
                 ></div>
-                <span className="hidden sm:inline">
-                  {autoRefreshEnabled ? "Auto ON" : "Auto OFF"}
-                </span>
-                <span className="sm:hidden">
-                  {autoRefreshEnabled ? "ON" : "OFF"}
-                </span>
+                <span className="hidden sm:inline">{autoRefreshEnabled ? "Auto ON" : "Auto OFF"}</span>
+                <span className="sm:hidden">{autoRefreshEnabled ? "ON" : "OFF"}</span>
               </Button>
 
               {/* Manual refresh button */}
@@ -372,14 +363,8 @@ export default function AdminMessagesPage({
                 variant="outline"
                 size="sm"
               >
-                <RefreshCw
-                  className={`h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2 ${
-                    refreshing ? "animate-spin" : ""
-                  }`}
-                />
-                <span className="hidden sm:inline">
-                  {refreshing ? "Refreshing..." : "Refresh"}
-                </span>
+                <RefreshCw className={`h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2 ${refreshing ? "animate-spin" : ""}`} />
+                <span className="hidden sm:inline">{refreshing ? "Refreshing..." : "Refresh"}</span>
                 <span className="sm:hidden">↻</span>
               </Button>
             </div>
@@ -492,27 +477,18 @@ export default function AdminMessagesPage({
                       <Users className="h-5 w-5 text-white" />
                     </div>
                     <div>
-                      <CardTitle className="text-lg font-bold text-white">
-                        Customer List
-                      </CardTitle>
-                      <CardDescription className="text-orange-100 text-sm">
-                        Tap to chat
-                      </CardDescription>
+                      <CardTitle className="text-lg font-bold text-white">Customer List</CardTitle>
+                      <CardDescription className="text-orange-100 text-sm">Tap to chat</CardDescription>
                     </div>
                   </div>
 
                   {/* Auto-refresh status indicator */}
                   <div className="flex items-center space-x-2">
                     <div
-                      className={`w-2 h-2 rounded-full ${
-                        autoRefreshEnabled
-                          ? "bg-green-400 animate-pulse"
-                          : "bg-red-400"
-                      }`}
+                      className={`w-2 h-2 rounded-full ${autoRefreshEnabled ? "bg-green-400 animate-pulse" : "bg-red-400"
+                        }`}
                     ></div>
-                    <span className="text-white text-xs">
-                      {autoRefreshEnabled ? "Live" : "Paused"}
-                    </span>
+                    <span className="text-white text-xs">{autoRefreshEnabled ? "Live" : "Paused"}</span>
                   </div>
                 </div>
               </div>
@@ -534,10 +510,7 @@ export default function AdminMessagesPage({
                   {loading ? (
                     <div className="space-y-3">
                       {[1, 2, 3, 4].map((i) => (
-                        <div
-                          key={i}
-                          className="animate-pulse p-3 bg-gray-100 rounded-lg"
-                        >
+                        <div key={i} className="animate-pulse p-3 bg-gray-100 rounded-lg">
                           <div className="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
                           <div className="h-3 bg-gray-200 rounded w-1/2"></div>
                         </div>
@@ -545,9 +518,9 @@ export default function AdminMessagesPage({
                     </div>
                   ) : filteredUsers.length > 0 ? (
                     filteredUsers.map((user) => {
-                      const messageCount = getUserMessageCount(user.id);
-                      const lastMessage = getLastMessage(user.id);
-                      const unreadCount = getUnreadCount(user.id);
+                      const messageCount = getUserMessageCount(user.id)
+                      const lastMessage = getLastMessage(user.id)
+                      const unreadCount = getUnreadCount(user.id)
 
                       return (
                         <div
@@ -564,26 +537,18 @@ export default function AdminMessagesPage({
                               </div>
                               {unreadCount > 0 && (
                                 <div className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full flex items-center justify-center animate-pulse">
-                                  <span className="text-white text-xs font-bold">
-                                    {unreadCount}
-                                  </span>
+                                  <span className="text-white text-xs font-bold">{unreadCount}</span>
                                 </div>
                               )}
                             </div>
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center justify-between mb-1">
-                                <h4 className="font-bold text-gray-900 truncate text-sm">
-                                  {user.name}
-                                </h4>
-                                <span className="text-xs text-gray-500">
-                                  {messageCount}
-                                </span>
+                                <h4 className="font-bold text-gray-900 truncate text-sm">{user.name}</h4>
+                                <span className="text-xs text-gray-500">{messageCount}</span>
                               </div>
                               <div className="flex items-center space-x-2 mb-1">
                                 <Mail className="h-3 w-3 text-gray-400" />
-                                <p className="text-xs text-gray-600 truncate">
-                                  {user.email}
-                                </p>
+                                <p className="text-xs text-gray-600 truncate">{user.email}</p>
                               </div>
                               {lastMessage && (
                                 <p className="text-xs text-gray-500 truncate">
@@ -593,7 +558,7 @@ export default function AdminMessagesPage({
                             </div>
                           </div>
                         </div>
-                      );
+                      )
                     })
                   ) : (
                     <div className="text-center py-8">
@@ -620,32 +585,21 @@ export default function AdminMessagesPage({
                       <ArrowLeft className="h-5 w-5" />
                     </Button>
                     <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center shadow-lg">
-                      <span className="text-white font-bold text-sm">
-                        {selectedUser?.name.charAt(0).toUpperCase()}
-                      </span>
+                      <span className="text-white font-bold text-sm">{selectedUser?.name.charAt(0).toUpperCase()}</span>
                     </div>
                     <div>
-                      <h3 className="text-lg font-bold text-white">
-                        {selectedUser?.name}
-                      </h3>
-                      <p className="text-orange-100 text-xs">
-                        {selectedUser?.email}
-                      </p>
+                      <h3 className="text-lg font-bold text-white">{selectedUser?.name}</h3>
+                      <p className="text-orange-100 text-xs">{selectedUser?.email}</p>
                     </div>
                   </div>
 
                   {/* Live status indicator */}
                   <div className="flex items-center space-x-2">
                     <div
-                      className={`w-2 h-2 rounded-full ${
-                        autoRefreshEnabled
-                          ? "bg-green-400 animate-pulse"
-                          : "bg-red-400"
-                      }`}
+                      className={`w-2 h-2 rounded-full ${autoRefreshEnabled ? "bg-green-400 animate-pulse" : "bg-red-400"
+                        }`}
                     ></div>
-                    <span className="text-white text-xs">
-                      {autoRefreshEnabled ? "Live" : "Paused"}
-                    </span>
+                    <span className="text-white text-xs">{autoRefreshEnabled ? "Live" : "Paused"}</span>
                   </div>
                 </div>
               </div>
@@ -657,16 +611,13 @@ export default function AdminMessagesPage({
                     userMessages.map((message) => (
                       <div
                         key={message.id}
-                        className={`flex space-x-2 ${
-                          message.from_admin ? "flex-row-reverse" : "flex-row"
-                        }`}
+                        className={`flex space-x-2 ${message.from_admin ? "flex-row-reverse" : "flex-row"}`}
                       >
                         <div
-                          className={`w-8 h-8 rounded-full flex items-center justify-center shadow-lg ${
-                            message.from_admin
+                          className={`w-8 h-8 rounded-full flex items-center justify-center shadow-lg ${message.from_admin
                               ? "bg-gradient-to-br from-[#F26623] to-[#E55A1F]"
                               : "bg-gradient-to-br from-gray-500 to-gray-600"
-                          }`}
+                            }`}
                         >
                           {message.from_admin ? (
                             <Shield className="h-4 w-4 text-white" />
@@ -674,21 +625,14 @@ export default function AdminMessagesPage({
                             <User className="h-4 w-4 text-white" />
                           )}
                         </div>
-                        <div
-                          className={`flex-1 max-w-[75%] ${
-                            message.from_admin ? "text-right" : "text-left"
-                          }`}
-                        >
+                        <div className={`flex-1 max-w-[75%] ${message.from_admin ? "text-right" : "text-left"}`}>
                           <div
-                            className={`p-3 rounded-xl shadow-lg ${
-                              message.from_admin
+                            className={`p-3 rounded-xl shadow-lg ${message.from_admin
                                 ? "bg-gradient-to-br from-[#F26623]/10 to-[#E55A1F]/20 border border-[#F26623]/20 text-gray-900"
                                 : "bg-gradient-to-br from-gray-100 to-gray-200 border border-gray-200 text-gray-900"
-                            }`}
+                              }`}
                           >
-                            <p className="text-sm leading-relaxed">
-                              {message.message}
-                            </p>
+                            <p className="text-sm leading-relaxed">{message.message}</p>
                             {message.from_admin && (
                               <div className="flex items-center mt-2 text-xs text-[#F26623] font-semibold">
                                 <CheckCircle className="h-3 w-3 mr-1" />
@@ -706,24 +650,16 @@ export default function AdminMessagesPage({
                   ) : (
                     <div className="text-center py-8">
                       <MessageSquare className="h-10 w-10 text-gray-400 mx-auto mb-4" />
-                      <p className="text-gray-500 text-sm">
-                        No messages yet. Start the conversation!
-                      </p>
+                      <p className="text-gray-500 text-sm">No messages yet. Start the conversation!</p>
                     </div>
                   )}
                   <div ref={messagesEndRef} />
                 </div>
 
                 {/* Send Message Form - Mobile */}
-                <form
-                  onSubmit={sendMessage}
-                  className="space-y-3 border-t border-[#F26623]/10 pt-4"
-                >
+                <form onSubmit={sendMessage} className="space-y-3 border-t border-[#F26623]/10 pt-4">
                   <div className="space-y-2">
-                    <Label
-                      htmlFor="message"
-                      className="text-gray-700 font-semibold flex items-center text-sm"
-                    >
+                    <Label htmlFor="message" className="text-gray-700 font-semibold flex items-center text-sm">
                       <Send className="h-4 w-4 mr-2 text-[#F26623]" />
                       Reply to {selectedUser?.name}
                     </Label>
@@ -762,27 +698,18 @@ export default function AdminMessagesPage({
                     <Users className="h-6 w-6 text-white" />
                   </div>
                   <div>
-                    <CardTitle className="text-xl font-bold text-white">
-                      Customer List
-                    </CardTitle>
-                    <CardDescription className="text-orange-100">
-                      Auto-updating every second
-                    </CardDescription>
+                    <CardTitle className="text-xl font-bold text-white">Customer List</CardTitle>
+                    <CardDescription className="text-orange-100">Auto-updating every second</CardDescription>
                   </div>
                 </div>
 
                 {/* Auto-refresh status indicator */}
                 <div className="flex items-center space-x-2">
                   <div
-                    className={`w-2 h-2 rounded-full ${
-                      autoRefreshEnabled
-                        ? "bg-green-400 animate-pulse"
-                        : "bg-red-400"
-                    }`}
+                    className={`w-2 h-2 rounded-full ${autoRefreshEnabled ? "bg-green-400 animate-pulse" : "bg-red-400"
+                      }`}
                   ></div>
-                  <span className="text-white text-sm">
-                    {autoRefreshEnabled ? "Live" : "Paused"}
-                  </span>
+                  <span className="text-white text-sm">{autoRefreshEnabled ? "Live" : "Paused"}</span>
                 </div>
               </div>
             </div>
@@ -804,10 +731,7 @@ export default function AdminMessagesPage({
                 {loading ? (
                   <div className="space-y-3">
                     {[1, 2, 3, 4].map((i) => (
-                      <div
-                        key={i}
-                        className="animate-pulse p-4 bg-gray-100 rounded-xl"
-                      >
+                      <div key={i} className="animate-pulse p-4 bg-gray-100 rounded-xl">
                         <div className="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
                         <div className="h-3 bg-gray-200 rounded w-1/2"></div>
                       </div>
@@ -815,49 +739,38 @@ export default function AdminMessagesPage({
                   </div>
                 ) : filteredUsers.length > 0 ? (
                   filteredUsers.map((user) => {
-                    const messageCount = getUserMessageCount(user.id);
-                    const lastMessage = getLastMessage(user.id);
-                    const unreadCount = getUnreadCount(user.id);
+                    const messageCount = getUserMessageCount(user.id)
+                    const lastMessage = getLastMessage(user.id)
+                    const unreadCount = getUnreadCount(user.id)
 
                     return (
                       <div
                         key={user.id}
                         onClick={() => setSelectedUser(user)}
-                        className={`p-4 rounded-xl cursor-pointer transition-all duration-300 border-2 ${
-                          selectedUser?.id === user.id
+                        className={`p-4 rounded-xl cursor-pointer transition-all duration-300 border-2 ${selectedUser?.id === user.id
                             ? "bg-gradient-to-r from-[#F26623]/10 to-[#E55A1F]/20 border-[#F26623]/30"
                             : "bg-gray-50 border-gray-200 hover:bg-[#F26623]/5 hover:border-[#F26623]/20"
-                        }`}
+                          }`}
                       >
                         <div className="flex items-center space-x-3">
                           <div className="relative">
                             <div className="w-12 h-12 bg-gradient-to-r from-[#F26623] to-[#E55A1F] rounded-full flex items-center justify-center shadow-lg">
-                              <span className="text-white font-bold text-lg">
-                                {user.name.charAt(0).toUpperCase()}
-                              </span>
+                              <span className="text-white font-bold text-lg">{user.name.charAt(0).toUpperCase()}</span>
                             </div>
                             {unreadCount > 0 && (
                               <div className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 rounded-full flex items-center justify-center animate-pulse">
-                                <span className="text-white text-xs font-bold">
-                                  {unreadCount}
-                                </span>
+                                <span className="text-white text-xs font-bold">{unreadCount}</span>
                               </div>
                             )}
                           </div>
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center justify-between mb-1">
-                              <h4 className="font-bold text-gray-900 truncate">
-                                {user.name}
-                              </h4>
-                              <span className="text-xs text-gray-500">
-                                {messageCount} msgs
-                              </span>
+                              <h4 className="font-bold text-gray-900 truncate">{user.name}</h4>
+                              <span className="text-xs text-gray-500">{messageCount} msgs</span>
                             </div>
                             <div className="flex items-center space-x-2 mb-1">
                               <Mail className="h-3 w-3 text-gray-400" />
-                              <p className="text-sm text-gray-600 truncate">
-                                {user.email}
-                              </p>
+                              <p className="text-sm text-gray-600 truncate">{user.email}</p>
                             </div>
                             {lastMessage && (
                               <p className="text-xs text-gray-500 truncate">
@@ -867,7 +780,7 @@ export default function AdminMessagesPage({
                           </div>
                         </div>
                       </div>
-                    );
+                    )
                   })
                 ) : (
                   <div className="text-center py-8">
@@ -893,12 +806,8 @@ export default function AdminMessagesPage({
                         </span>
                       </div>
                       <div>
-                        <h3 className="text-xl font-bold text-white">
-                          {selectedUser.name}
-                        </h3>
-                        <p className="text-orange-100 text-sm">
-                          {selectedUser.email}
-                        </p>
+                        <h3 className="text-xl font-bold text-white">{selectedUser.name}</h3>
+                        <p className="text-orange-100 text-sm">{selectedUser.email}</p>
                       </div>
                     </div>
 
@@ -906,15 +815,10 @@ export default function AdminMessagesPage({
                     <div className="flex items-center space-x-3">
                       <div className="flex items-center space-x-2">
                         <div
-                          className={`w-2 h-2 rounded-full ${
-                            autoRefreshEnabled
-                              ? "bg-green-400 animate-pulse"
-                              : "bg-red-400"
-                          }`}
+                          className={`w-2 h-2 rounded-full ${autoRefreshEnabled ? "bg-green-400 animate-pulse" : "bg-red-400"
+                            }`}
                         ></div>
-                        <span className="text-white text-sm">
-                          {autoRefreshEnabled ? "Live Chat" : "Paused"}
-                        </span>
+                        <span className="text-white text-sm">{autoRefreshEnabled ? "Live Chat" : "Paused"}</span>
                       </div>
                     </div>
                   </div>
@@ -927,16 +831,13 @@ export default function AdminMessagesPage({
                       userMessages.map((message) => (
                         <div
                           key={message.id}
-                          className={`flex space-x-3 ${
-                            message.from_admin ? "flex-row-reverse" : "flex-row"
-                          }`}
+                          className={`flex space-x-3 ${message.from_admin ? "flex-row-reverse" : "flex-row"}`}
                         >
                           <div
-                            className={`w-10 h-10 rounded-full flex items-center justify-center shadow-lg ${
-                              message.from_admin
+                            className={`w-10 h-10 rounded-full flex items-center justify-center shadow-lg ${message.from_admin
                                 ? "bg-gradient-to-br from-[#F26623] to-[#E55A1F]"
                                 : "bg-gradient-to-br from-gray-500 to-gray-600"
-                            }`}
+                              }`}
                           >
                             {message.from_admin ? (
                               <Shield className="h-5 w-5 text-white" />
@@ -945,20 +846,15 @@ export default function AdminMessagesPage({
                             )}
                           </div>
                           <div
-                            className={`flex-1 max-w-xs lg:max-w-md ${
-                              message.from_admin ? "text-right" : "text-left"
-                            }`}
+                            className={`flex-1 max-w-xs lg:max-w-md ${message.from_admin ? "text-right" : "text-left"}`}
                           >
                             <div
-                              className={`p-4 rounded-2xl shadow-lg ${
-                                message.from_admin
+                              className={`p-4 rounded-2xl shadow-lg ${message.from_admin
                                   ? "bg-gradient-to-br from-[#F26623]/10 to-[#E55A1F]/20 border-2 border-[#F26623]/20 text-gray-900"
                                   : "bg-gradient-to-br from-gray-100 to-gray-200 border-2 border-gray-200 text-gray-900"
-                              }`}
+                                }`}
                             >
-                              <p className="text-sm leading-relaxed">
-                                {message.message}
-                              </p>
+                              <p className="text-sm leading-relaxed">{message.message}</p>
                               {message.from_admin && (
                                 <div className="flex items-center mt-2 text-xs text-[#F26623] font-semibold">
                                   <CheckCircle className="h-3 w-3 mr-1" />
@@ -976,24 +872,16 @@ export default function AdminMessagesPage({
                     ) : (
                       <div className="text-center py-12">
                         <MessageSquare className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                        <p className="text-gray-500">
-                          No messages yet. Start the conversation!
-                        </p>
+                        <p className="text-gray-500">No messages yet. Start the conversation!</p>
                       </div>
                     )}
                     <div ref={messagesEndRef} />
                   </div>
 
                   {/* Send Message Form */}
-                  <form
-                    onSubmit={sendMessage}
-                    className="space-y-4 border-t-2 border-[#F26623]/10 pt-6"
-                  >
+                  <form onSubmit={sendMessage} className="space-y-4 border-t-2 border-[#F26623]/10 pt-6">
                     <div className="space-y-2">
-                      <Label
-                        htmlFor="message"
-                        className="text-gray-700 font-semibold flex items-center"
-                      >
+                      <Label htmlFor="message" className="text-gray-700 font-semibold flex items-center">
                         <Send className="h-4 w-4 mr-2 text-[#F26623]" />
                         Reply to {selectedUser.name}
                       </Label>
@@ -1024,12 +912,8 @@ export default function AdminMessagesPage({
                   <div className="bg-gradient-to-br from-[#F26623]/10 to-[#E55A1F]/20 rounded-full w-24 h-24 flex items-center justify-center mx-auto mb-6">
                     <MessageSquare className="h-12 w-12 text-[#F26623]" />
                   </div>
-                  <h3 className="text-xl font-bold text-gray-900 mb-2">
-                    Select a Customer
-                  </h3>
-                  <p className="text-gray-600">
-                    Choose a customer from the list to start chatting
-                  </p>
+                  <h3 className="text-xl font-bold text-gray-900 mb-2">Select a Customer</h3>
+                  <p className="text-gray-600">Choose a customer from the list to start chatting</p>
                 </div>
               </div>
             )}
@@ -1037,5 +921,5 @@ export default function AdminMessagesPage({
         </div>
       </div>
     </div>
-  );
+  )
 }

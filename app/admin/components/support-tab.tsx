@@ -1,17 +1,24 @@
-'use client'
+"use client"
 
-import { useState, useEffect } from 'react'
-import { supabase } from '@/lib/supabase'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
-import { HelpCircle, Eye, Trash2, Clock, CheckCircle, AlertCircle, XCircle } from 'lucide-react'
-import { Database } from '@/lib/supabase'
+import { useState, useEffect } from "react"
+import { supabase } from "@/lib/supabase"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
+import { Badge } from "@/components/ui/badge"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog"
+import { HelpCircle, Eye, Trash2, Clock, CheckCircle, AlertCircle } from "lucide-react"
+import type { Database } from "@/lib/supabase"
 
-type User = Database['public']['Tables']['users']['Row']
-type SupportTicket = Database['public']['Tables']['support_tickets']['Row'] & {
+type User = Database["public"]["Tables"]["users"]["Row"]
+type SupportTicket = Database["public"]["Tables"]["support_tickets"]["Row"] & {
   users?: { name: string; email: string }
 }
 
@@ -25,19 +32,15 @@ export default function SupportTab() {
     const loadData = async () => {
       // Load support tickets with user info
       const { data: ticketsData } = await supabase
-        .from('support_tickets')
+        .from("support_tickets")
         .select(`
           *,
           users!inner(name, email)
         `)
-        .order('created_at', { ascending: false })
+        .order("created_at", { ascending: false })
 
       // Load users
-      const { data: usersData } = await supabase
-        .from('users')
-        .select('*')
-        .neq('role', 'admin')
-        .order('name')
+      const { data: usersData } = await supabase.from("users").select("*").neq("role", "admin").order("name")
 
       setTickets(ticketsData || [])
       setUsers(usersData || [])
@@ -48,8 +51,8 @@ export default function SupportTab() {
 
     // Real-time subscription
     const channel = supabase
-      .channel('admin_support')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'support_tickets' }, () => {
+      .channel("admin_support")
+      .on("postgres_changes", { event: "*", schema: "public", table: "support_tickets" }, () => {
         loadData()
       })
       .subscribe()
@@ -60,54 +63,44 @@ export default function SupportTab() {
   }, [])
 
   const updateTicketStatus = async (ticketId: string, newStatus: string, userId: string) => {
-    const { error } = await supabase
-      .from('support_tickets')
-      .update({ status: newStatus })
-      .eq('id', ticketId)
+    const { error } = await supabase.from("support_tickets").update({ status: newStatus }).eq("id", ticketId)
 
     if (error) {
-      console.error('Error updating ticket status:', error)
+      console.error("Error updating ticket status:", error)
     } else {
       // Log activity
-      await supabase
-        .from('activity_logs')
-        .insert({
-          user_id: userId,
-          activity: `Support ticket status updated to: ${newStatus}`
-        })
+      await supabase.from("activity_logs").insert({
+        user_id: userId,
+        activity: `Support ticket status updated to: ${newStatus}`,
+      })
     }
   }
 
   const deleteTicket = async (ticket: SupportTicket) => {
-    if (!confirm('Are you sure you want to delete this support ticket?')) return
+    if (!confirm("Are you sure you want to delete this support ticket?")) return
 
-    const { error } = await supabase
-      .from('support_tickets')
-      .delete()
-      .eq('id', ticket.id)
+    const { error } = await supabase.from("support_tickets").delete().eq("id", ticket.id)
 
     if (error) {
-      console.error('Error deleting ticket:', error)
+      console.error("Error deleting ticket:", error)
     } else {
       // Log activity
-      await supabase
-        .from('activity_logs')
-        .insert({
-          user_id: ticket.user_id,
-          activity: 'Support ticket deleted by admin'
-        })
+      await supabase.from("activity_logs").insert({
+        user_id: ticket.user_id,
+        activity: "Support ticket deleted by admin",
+      })
     }
   }
 
   const getStatusIcon = (status: string) => {
     switch (status) {
-      case 'open':
+      case "open":
         return <Clock className="h-4 w-4" />
-      case 'closed':
+      case "closed":
         return <CheckCircle className="h-4 w-4" />
-      case 'in_progress':
+      case "in_progress":
         return <AlertCircle className="h-4 w-4" />
-      case 'resolved':
+      case "resolved":
         return <CheckCircle className="h-4 w-4" />
       default:
         return <HelpCircle className="h-4 w-4" />
@@ -116,30 +109,30 @@ export default function SupportTab() {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'open':
-        return 'bg-yellow-100 text-yellow-800'
-      case 'closed':
-        return 'bg-gray-100 text-gray-800'
-      case 'in_progress':
-        return 'bg-blue-100 text-blue-800'
-      case 'resolved':
-        return 'bg-green-100 text-green-800'
+      case "open":
+        return "bg-yellow-100 text-yellow-800"
+      case "closed":
+        return "bg-gray-100 text-gray-800"
+      case "in_progress":
+        return "bg-blue-100 text-blue-800"
+      case "resolved":
+        return "bg-green-100 text-green-800"
       default:
-        return 'bg-gray-100 text-gray-800'
+        return "bg-gray-100 text-gray-800"
     }
   }
 
   const stats = {
     total: tickets.length,
-    open: tickets.filter(t => t.status === 'open').length,
-    inProgress: tickets.filter(t => t.status === 'in_progress').length,
-    resolved: tickets.filter(t => t.status === 'resolved' || t.status === 'closed').length,
+    open: tickets.filter((t) => t.status === "open").length,
+    inProgress: tickets.filter((t) => t.status === "in_progress").length,
+    resolved: tickets.filter((t) => t.status === "resolved" || t.status === "closed").length,
   }
 
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold text-gray-900">Support Management</h1>
+        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Support Management</h1>
         <p className="text-gray-600">Manage user support tickets and requests</p>
       </div>
 
@@ -206,27 +199,23 @@ export default function SupportTab() {
             <div className="space-y-4">
               {tickets.map((ticket) => (
                 <div key={ticket.id} className="p-4 border rounded-lg hover:bg-gray-50">
-                  <div className="flex justify-between items-start mb-2">
+                  <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3 sm:gap-0 mb-2">
                     <div className="flex-1">
                       <h3 className="font-medium">{ticket.users?.name}</h3>
                       <p className="text-sm text-gray-500">{ticket.users?.email}</p>
-                      <p className="text-sm text-gray-900 mt-2">
-                        {ticket.issue.length > 150 
-                          ? `${ticket.issue.substring(0, 150)}...` 
-                          : ticket.issue
-                        }
+                      <p className="text-sm text-gray-900 mt-2 pr-0 sm:pr-4">
+                        {ticket.issue.length > 150 ? `${ticket.issue.substring(0, 150)}...` : ticket.issue}
                       </p>
                       <p className="text-xs text-gray-400 mt-2">
-                        Created {new Date(ticket.created_at).toLocaleDateString()} | 
-                        #{ticket.id.substring(0, 8)}
+                        Created {new Date(ticket.created_at).toLocaleDateString()} | #{ticket.id.substring(0, 8)}
                       </p>
                     </div>
-                    <div className="flex items-center space-x-2 ml-4">
+                    <div className="flex items-center space-x-2 sm:ml-4 flex-wrap gap-2">
                       <Select
                         value={ticket.status}
                         onValueChange={(value) => updateTicketStatus(ticket.id, value, ticket.user_id)}
                       >
-                        <SelectTrigger className="w-32">
+                        <SelectTrigger className="w-full sm:w-32">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
@@ -236,36 +225,30 @@ export default function SupportTab() {
                           <SelectItem value="closed">Closed</SelectItem>
                         </SelectContent>
                       </Select>
-                      
+
                       <Badge className={`${getStatusColor(ticket.status)} flex items-center space-x-1`}>
                         {getStatusIcon(ticket.status)}
-                        <span className="capitalize">{ticket.status.replace('_', ' ')}</span>
+                        <span className="capitalize">{ticket.status.replace("_", " ")}</span>
                       </Badge>
 
                       <Dialog>
                         <DialogTrigger asChild>
-                          <Button 
-                            variant="outline" 
-                            size="sm"
-                            onClick={() => setSelectedTicket(ticket)}
-                          >
+                          <Button variant="outline" size="sm" onClick={() => setSelectedTicket(ticket)}>
                             <Eye className="h-4 w-4 mr-1" />
                             View
                           </Button>
                         </DialogTrigger>
-                        <DialogContent className="max-w-2xl">
+                        <DialogContent className="max-w-2xl mx-4">
                           <DialogHeader>
                             <DialogTitle>Support Ticket Details</DialogTitle>
-                            <DialogDescription>
-                              Ticket from {selectedTicket?.users?.name}
-                            </DialogDescription>
+                            <DialogDescription>Ticket from {selectedTicket?.users?.name}</DialogDescription>
                           </DialogHeader>
                           <div className="space-y-4">
                             <div className="p-4 bg-gray-50 rounded-lg">
                               <h4 className="font-medium mb-2">Issue Description:</h4>
                               <p className="text-sm text-gray-700">{selectedTicket?.issue}</p>
                             </div>
-                            <div className="grid grid-cols-2 gap-4 text-sm">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
                               <div>
                                 <span className="font-medium">User:</span> {selectedTicket?.users?.name}
                               </div>
@@ -273,13 +256,14 @@ export default function SupportTab() {
                                 <span className="font-medium">Email:</span> {selectedTicket?.users?.email}
                               </div>
                               <div>
-                                <span className="font-medium">Status:</span> 
-                                <Badge className={`ml-2 ${getStatusColor(selectedTicket?.status || '')}`}>
+                                <span className="font-medium">Status:</span>
+                                <Badge className={`ml-2 ${getStatusColor(selectedTicket?.status || "")}`}>
                                   {selectedTicket?.status}
                                 </Badge>
                               </div>
                               <div>
-                                <span className="font-medium">Created:</span> {new Date(selectedTicket?.created_at || '').toLocaleString()}
+                                <span className="font-medium">Created:</span>{" "}
+                                {new Date(selectedTicket?.created_at || "").toLocaleString()}
                               </div>
                             </div>
                           </div>

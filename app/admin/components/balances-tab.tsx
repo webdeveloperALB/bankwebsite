@@ -1,24 +1,14 @@
-"use client";
+"use client"
 
-import { useState, useEffect } from "react";
-import { supabase } from "@/lib/supabase";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import type React from "react"
+
+import { useState, useEffect } from "react"
+import { supabase } from "@/lib/supabase"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import {
   Dialog,
   DialogContent,
@@ -26,65 +16,52 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from "@/components/ui/dialog";
-import {
-  CreditCard,
-  Plus,
-  Edit,
-  Trash2,
-  DollarSign,
-  ArrowUpDown,
-} from "lucide-react";
-import { Database } from "@/lib/supabase";
-import {
-  exchangeRateManager,
-  convertCurrency,
-  subscribeToRateUpdates,
-} from "@/lib/exchange-rates";
+} from "@/components/ui/dialog"
+import { CreditCard, Plus, Trash2, DollarSign, ArrowUpDown } from "lucide-react"
+import type { Database } from "@/lib/supabase"
+import { exchangeRateManager, convertCurrency, subscribeToRateUpdates } from "@/lib/exchange-rates"
 
-type User = Database["public"]["Tables"]["users"]["Row"];
+type User = Database["public"]["Tables"]["users"]["Row"]
 type Balance = Database["public"]["Tables"]["balances"]["Row"] & {
-  users?: { name: string; email: string };
-};
+  users?: { name: string; email: string }
+}
 
-const CURRENCIES = ["USD", "EUR", "GBP", "CAD", "AUD", "JPY", "CHF"];
+const CURRENCIES = ["USD", "EUR", "GBP", "CAD", "AUD", "JPY", "CHF"]
 
 export default function BalancesTab() {
-  const [balances, setBalances] = useState<Balance[]>([]);
-  const [users, setUsers] = useState<User[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [exchangeRates, setExchangeRates] = useState<{ [key: string]: number }>(
-    {}
-  );
-  const [refreshKey, setRefreshKey] = useState(0);
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [transferDialogOpen, setTransferDialogOpen] = useState(false);
-  const [editingBalance, setEditingBalance] = useState<Balance | null>(null);
+  const [balances, setBalances] = useState<Balance[]>([])
+  const [users, setUsers] = useState<User[]>([])
+  const [loading, setLoading] = useState(true)
+  const [exchangeRates, setExchangeRates] = useState<{ [key: string]: number }>({})
+  const [refreshKey, setRefreshKey] = useState(0)
+  const [dialogOpen, setDialogOpen] = useState(false)
+  const [transferDialogOpen, setTransferDialogOpen] = useState(false)
+  const [editingBalance, setEditingBalance] = useState<Balance | null>(null)
 
   // Form state
-  const [selectedUser, setSelectedUser] = useState("");
-  const [currency, setCurrency] = useState("");
-  const [amount, setAmount] = useState("");
-  const [operation, setOperation] = useState("set"); // set, add, deduct
+  const [selectedUser, setSelectedUser] = useState("")
+  const [currency, setCurrency] = useState("")
+  const [amount, setAmount] = useState("")
+  const [operation, setOperation] = useState("set") // set, add, deduct
 
   // Transfer state
-  const [fromCurrency, setFromCurrency] = useState("");
-  const [toCurrency, setToCurrency] = useState("");
-  const [transferAmount, setTransferAmount] = useState("");
-  const [transferUser, setTransferUser] = useState("");
+  const [fromCurrency, setFromCurrency] = useState("")
+  const [toCurrency, setToCurrency] = useState("")
+  const [transferAmount, setTransferAmount] = useState("")
+  const [transferUser, setTransferUser] = useState("")
 
   // Force re-render when REAL exchange rates change from APIs
   const forceRerender = () => {
-    setRefreshKey((prev: number) => prev + 1);
-    console.log("🔄 Admin forcing UI re-render due to REAL API rate changes");
-  };
+    setRefreshKey((prev: number) => prev + 1)
+    console.log("🔄 Admin forcing UI re-render due to REAL API rate changes")
+  }
 
   useEffect(() => {
     // Subscribe to REAL-TIME exchange rate updates from APIs
-    const unsubscribe = subscribeToRateUpdates(forceRerender);
+    const unsubscribe = subscribeToRateUpdates(forceRerender)
 
     // Get initial REAL rates from APIs
-    setExchangeRates(exchangeRateManager.getAllRates());
+    setExchangeRates(exchangeRateManager.getAllRates())
 
     const loadData = async () => {
       // Load balances with user info
@@ -94,61 +71,51 @@ export default function BalancesTab() {
           `
           *,
           users!inner(name, email)
-        `
+        `,
         )
-        .order("updated_at", { ascending: false });
+        .order("updated_at", { ascending: false })
 
       // Load users
-      const { data: usersData } = await supabase
-        .from("users")
-        .select("*")
-        .neq("role", "admin")
-        .order("name");
+      const { data: usersData } = await supabase.from("users").select("*").neq("role", "admin").order("name")
 
-      setBalances(balancesData || []);
-      setUsers(usersData || []);
-      setLoading(false);
-    };
+      setBalances(balancesData || [])
+      setUsers(usersData || [])
+      setLoading(false)
+    }
 
-    loadData();
+    loadData()
 
     // Real-time subscription
     const channel = supabase
       .channel("admin_balances")
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "balances" },
-        () => {
-          loadData();
-        }
-      )
-      .subscribe();
+      .on("postgres_changes", { event: "*", schema: "public", table: "balances" }, () => {
+        loadData()
+      })
+      .subscribe()
 
     return () => {
-      supabase.removeChannel(channel);
-      unsubscribe();
-    };
-  }, []);
+      supabase.removeChannel(channel)
+      unsubscribe()
+    }
+  }, [])
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!selectedUser || !currency || !amount) return;
+    e.preventDefault()
+    if (!selectedUser || !currency || !amount) return
 
     try {
-      const numAmount = parseFloat(amount);
+      const numAmount = Number.parseFloat(amount)
 
       // Find existing balance
-      const existingBalance = balances.find(
-        (b) => b.user_id === selectedUser && b.currency === currency
-      );
+      const existingBalance = balances.find((b) => b.user_id === selectedUser && b.currency === currency)
 
-      let finalAmount = numAmount;
+      let finalAmount = numAmount
       if (existingBalance && operation !== "set") {
-        const currentAmount = Number(existingBalance.amount);
+        const currentAmount = Number(existingBalance.amount)
         if (operation === "add") {
-          finalAmount = currentAmount + numAmount;
+          finalAmount = currentAmount + numAmount
         } else if (operation === "deduct") {
-          finalAmount = Math.max(0, currentAmount - numAmount); // Don't allow negative
+          finalAmount = Math.max(0, currentAmount - numAmount) // Don't allow negative
         }
       }
 
@@ -160,58 +127,50 @@ export default function BalancesTab() {
             amount: finalAmount,
             updated_at: new Date().toISOString(),
           })
-          .eq("id", existingBalance.id);
+          .eq("id", existingBalance.id)
 
-        if (error) throw error;
+        if (error) throw error
       } else {
         // Create new balance
         const { error } = await supabase.from("balances").insert({
           user_id: selectedUser,
           currency: currency,
           amount: finalAmount,
-        });
+        })
 
-        if (error) throw error;
+        if (error) throw error
       }
 
       // Log activity
-      const operationText =
-        operation === "set"
-          ? "set to"
-          : operation === "add"
-          ? "increased by"
-          : "decreased by";
+      const operationText = operation === "set" ? "set to" : operation === "add" ? "increased by" : "decreased by"
       await supabase.from("activity_logs").insert({
         user_id: selectedUser,
         activity: `Admin ${operationText} ${currency} balance: ${numAmount}`,
-      });
+      })
 
-      resetForm();
+      resetForm()
     } catch (error) {
-      console.error("Error updating balance:", error);
+      console.error("Error updating balance:", error)
     }
-  };
+  }
 
   const handleTransfer = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!transferUser || !fromCurrency || !toCurrency || !transferAmount)
-      return;
+    e.preventDefault()
+    if (!transferUser || !fromCurrency || !toCurrency || !transferAmount) return
 
     try {
-      const amount = parseFloat(transferAmount);
+      const amount = Number.parseFloat(transferAmount)
 
       // Find source balance
-      const sourceBalance = balances.find(
-        (b) => b.user_id === transferUser && b.currency === fromCurrency
-      );
+      const sourceBalance = balances.find((b) => b.user_id === transferUser && b.currency === fromCurrency)
 
       if (!sourceBalance || Number(sourceBalance.amount) < amount) {
-        alert("Insufficient balance for transfer");
-        return;
+        alert("Insufficient balance for transfer")
+        return
       }
 
       // Calculate converted amount
-      const convertedAmount = convertCurrency(amount, fromCurrency, toCurrency);
+      const convertedAmount = convertCurrency(amount, fromCurrency, toCurrency)
 
       // Update source balance
       const { error: sourceError } = await supabase
@@ -220,14 +179,12 @@ export default function BalancesTab() {
           amount: Number(sourceBalance.amount) - amount,
           updated_at: new Date().toISOString(),
         })
-        .eq("id", sourceBalance.id);
+        .eq("id", sourceBalance.id)
 
-      if (sourceError) throw sourceError;
+      if (sourceError) throw sourceError
 
       // Find or create destination balance
-      const destBalance = balances.find(
-        (b) => b.user_id === transferUser && b.currency === toCurrency
-      );
+      const destBalance = balances.find((b) => b.user_id === transferUser && b.currency === toCurrency)
 
       if (destBalance) {
         // Update existing destination balance
@@ -237,18 +194,18 @@ export default function BalancesTab() {
             amount: Number(destBalance.amount) + convertedAmount,
             updated_at: new Date().toISOString(),
           })
-          .eq("id", destBalance.id);
+          .eq("id", destBalance.id)
 
-        if (destError) throw destError;
+        if (destError) throw destError
       } else {
         // Create new destination balance
         const { error: createError } = await supabase.from("balances").insert({
           user_id: transferUser,
           currency: toCurrency,
           amount: convertedAmount,
-        });
+        })
 
-        if (createError) throw createError;
+        if (createError) throw createError
       }
 
       // Create transaction record
@@ -257,92 +214,75 @@ export default function BalancesTab() {
         type: "transfer",
         currency: fromCurrency,
         amount: amount,
-      });
+      })
 
       // Log activity
       await supabase.from("activity_logs").insert({
         user_id: transferUser,
-        activity: `Admin converted ${amount} ${fromCurrency} to ${convertedAmount.toFixed(
-          2
-        )} ${toCurrency}`,
-      });
+        activity: `Admin converted ${amount} ${fromCurrency} to ${convertedAmount.toFixed(2)} ${toCurrency}`,
+      })
 
-      setTransferDialogOpen(false);
-      setTransferUser("");
-      setFromCurrency("");
-      setToCurrency("");
-      setTransferAmount("");
+      setTransferDialogOpen(false)
+      setTransferUser("")
+      setFromCurrency("")
+      setToCurrency("")
+      setTransferAmount("")
     } catch (error) {
-      console.error("Error processing transfer:", error);
+      console.error("Error processing transfer:", error)
     }
-  };
+  }
 
   const deleteBalance = async (balance: Balance) => {
-    if (!confirm(`Delete ${balance.currency} balance for this user?`)) return;
+    if (!confirm(`Delete ${balance.currency} balance for this user?`)) return
 
-    const { error } = await supabase
-      .from("balances")
-      .delete()
-      .eq("id", balance.id);
+    const { error } = await supabase.from("balances").delete().eq("id", balance.id)
 
     if (error) {
-      console.error("Error deleting balance:", error);
+      console.error("Error deleting balance:", error)
     } else {
       // Log activity
       await supabase.from("activity_logs").insert({
         user_id: balance.user_id,
         activity: `Admin deleted ${balance.currency} balance`,
-      });
+      })
     }
-  };
+  }
 
   const resetForm = () => {
-    setSelectedUser("");
-    setCurrency("");
-    setAmount("");
-    setOperation("set");
-    setEditingBalance(null);
-    setDialogOpen(false);
-  };
+    setSelectedUser("")
+    setCurrency("")
+    setAmount("")
+    setOperation("set")
+    setEditingBalance(null)
+    setDialogOpen(false)
+  }
 
   const totalValue = balances.reduce((sum, balance) => {
-    const usdAmount = convertCurrency(
-      Number(balance.amount),
-      balance.currency,
-      "USD"
-    );
-    return sum + usdAmount;
-  }, 0);
+    const usdAmount = convertCurrency(Number(balance.amount), balance.currency, "USD")
+    return sum + usdAmount
+  }, 0)
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
+    <div className="space-y-4 md:space-y-6 p-4 md:p-6 bg-gray-50 min-h-screen">
+      <div className="flex flex-col space-y-4 md:flex-row md:justify-between md:items-center md:space-y-0">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">
-            Balance Management
-          </h1>
-          <p className="text-gray-600">
-            Manage user balances across all currencies
-          </p>
+          <h1 className="text-2xl md:text-3xl font-bold text-[#F26623]">Balance Management</h1>
+          <p className="text-sm md:text-base text-gray-600">Manage user balances across all currencies</p>
         </div>
 
-        <div className="flex space-x-2">
-          <Dialog
-            open={transferDialogOpen}
-            onOpenChange={setTransferDialogOpen}
-          >
+        <div className="flex flex-col space-y-2 md:flex-row md:space-y-0 md:space-x-2">
+          <Dialog open={transferDialogOpen} onOpenChange={setTransferDialogOpen}>
             <DialogTrigger asChild>
-              <Button variant="outline">
+              <Button variant="outline" className="w-full md:w-auto bg-transparent">
                 <ArrowUpDown className="h-4 w-4 mr-2" />
-                Currency Transfer
+                <span className="hidden sm:inline">Currency Transfer</span>
+                <span className="sm:hidden">Transfer</span>
               </Button>
             </DialogTrigger>
             <DialogContent>
               <DialogHeader>
                 <DialogTitle>Currency Transfer</DialogTitle>
-                <DialogDescription>
-                  Convert between currencies with real-time exchange rates
-                </DialogDescription>
+                <DialogDescription>Convert between currencies with real-time exchange rates</DialogDescription>
               </DialogHeader>
               <form onSubmit={handleTransfer} className="space-y-4">
                 <div className="space-y-2">
@@ -364,10 +304,7 @@ export default function BalancesTab() {
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label>From Currency</Label>
-                    <Select
-                      value={fromCurrency}
-                      onValueChange={setFromCurrency}
-                    >
+                    <Select value={fromCurrency} onValueChange={setFromCurrency}>
                       <SelectTrigger>
                         <SelectValue placeholder="From" />
                       </SelectTrigger>
@@ -411,25 +348,17 @@ export default function BalancesTab() {
                   {fromCurrency && toCurrency && transferAmount && (
                     <p className="text-sm text-gray-600">
                       {transferAmount} {fromCurrency} ={" "}
-                      {convertCurrency(
-                        parseFloat(transferAmount),
-                        fromCurrency,
-                        toCurrency
-                      ).toFixed(4)}{" "}
+                      {convertCurrency(Number.parseFloat(transferAmount), fromCurrency, toCurrency).toFixed(4)}{" "}
                       {toCurrency}
                       <br />
                       <span className="text-xs text-gray-500">
-                        Rate: 1 {fromCurrency} ={" "}
-                        {convertCurrency(1, fromCurrency, toCurrency).toFixed(
-                          4
-                        )}{" "}
-                        {toCurrency}
+                        Rate: 1 {fromCurrency} = {convertCurrency(1, fromCurrency, toCurrency).toFixed(4)} {toCurrency}
                       </span>
                     </p>
                   )}
                 </div>
 
-                <Button type="submit" className="w-full">
+                <Button type="submit" className="w-full bg-[#F26623] hover:bg-[#E55A1F] text-white">
                   Convert Currency
                 </Button>
               </form>
@@ -438,17 +367,19 @@ export default function BalancesTab() {
 
           <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
             <DialogTrigger asChild>
-              <Button onClick={() => resetForm()}>
+              <Button
+                onClick={() => resetForm()}
+                className="bg-[#F26623] hover:bg-[#E55A1F] text-white w-full md:w-auto"
+              >
                 <Plus className="h-4 w-4 mr-2" />
-                Manage Balance
+                <span className="hidden sm:inline">Manage Balance</span>
+                <span className="sm:hidden">Manage</span>
               </Button>
             </DialogTrigger>
             <DialogContent>
               <DialogHeader>
                 <DialogTitle>Manage User Balance</DialogTitle>
-                <DialogDescription>
-                  Set, add, or deduct from user balances
-                </DialogDescription>
+                <DialogDescription>Set, add, or deduct from user balances</DialogDescription>
               </DialogHeader>
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="space-y-2">
@@ -492,9 +423,7 @@ export default function BalancesTab() {
                     <SelectContent>
                       <SelectItem value="set">Set Exact Amount</SelectItem>
                       <SelectItem value="add">Add to Balance</SelectItem>
-                      <SelectItem value="deduct">
-                        Deduct from Balance
-                      </SelectItem>
+                      <SelectItem value="deduct">Deduct from Balance</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -511,12 +440,8 @@ export default function BalancesTab() {
                   />
                 </div>
 
-                <Button type="submit" className="w-full">
-                  {operation === "set"
-                    ? "Set Balance"
-                    : operation === "add"
-                    ? "Add to Balance"
-                    : "Deduct from Balance"}
+                <Button type="submit" className="w-full bg-[#F26623] hover:bg-[#E55A1F] text-white">
+                  {operation === "set" ? "Set Balance" : operation === "add" ? "Add to Balance" : "Deduct from Balance"}
                 </Button>
               </form>
             </DialogContent>
@@ -525,55 +450,46 @@ export default function BalancesTab() {
       </div>
 
       {/* Balance Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-6">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              Total Balances
-            </CardTitle>
+            <CardTitle className="text-xs md:text-sm font-medium">Total Balances</CardTitle>
             <CreditCard className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{balances.length}</div>
+            <div className="text-xl md:text-2xl font-bold">{balances.length}</div>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              Total Value (USD)
-            </CardTitle>
+            <CardTitle className="text-xs md:text-sm font-medium">Total Value (USD)</CardTitle>
             <DollarSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">
-              $
-              {totalValue.toLocaleString("en-US", { minimumFractionDigits: 2 })}
+            <div className="text-xl md:text-2xl font-bold">
+              ${totalValue.toLocaleString("en-US", { minimumFractionDigits: 2 })}
             </div>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Currencies</CardTitle>
+            <CardTitle className="text-xs md:text-sm font-medium">Currencies</CardTitle>
             <ArrowUpDown className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">
-              {new Set(balances.map((b) => b.currency)).size}
-            </div>
+            <div className="text-xl md:text-2xl font-bold">{new Set(balances.map((b) => b.currency)).size}</div>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Active Users</CardTitle>
+            <CardTitle className="text-xs md:text-sm font-medium">Active Users</CardTitle>
             <CreditCard className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">
-              {new Set(balances.map((b) => b.user_id)).size}
-            </div>
+            <div className="text-xl md:text-2xl font-bold">{new Set(balances.map((b) => b.user_id)).size}</div>
           </CardContent>
         </Card>
       </div>
@@ -581,10 +497,8 @@ export default function BalancesTab() {
       {/* Balances List */}
       <Card>
         <CardHeader>
-          <CardTitle>All User Balances</CardTitle>
-          <CardDescription>
-            Complete overview of all user balances
-          </CardDescription>
+          <CardTitle className="text-lg md:text-xl">All User Balances</CardTitle>
+          <CardDescription>Complete overview of all user balances</CardDescription>
         </CardHeader>
         <CardContent>
           {loading ? (
@@ -604,27 +518,18 @@ export default function BalancesTab() {
                   className="flex justify-between items-center p-4 border rounded-lg hover:bg-gray-50"
                 >
                   <div>
-                    <h3 className="font-medium">{balance.users?.name}</h3>
-                    <p className="text-sm text-gray-500">
-                      {balance.users?.email}
-                    </p>
-                    <p className="text-sm text-gray-600">
+                    <h3 className="text-sm md:text-base font-medium">{balance.users?.name}</h3>
+                    <p className="text-xs md:text-sm text-gray-500">{balance.users?.email}</p>
+                    <p className="text-xs md:text-sm text-gray-600">
                       {balance.currency}:{" "}
                       {Number(balance.amount).toLocaleString("en-US", {
                         minimumFractionDigits: 2,
                       })}
                     </p>
-                    <p className="text-xs text-gray-400">
-                      Updated{" "}
-                      {new Date(balance.updated_at).toLocaleDateString()}
-                    </p>
+                    <p className="text-xs text-gray-400">Updated {new Date(balance.updated_at).toLocaleDateString()}</p>
                   </div>
                   <div className="flex items-center space-x-2">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => deleteBalance(balance)}
-                    >
+                    <Button variant="ghost" size="sm" onClick={() => deleteBalance(balance)}>
                       <Trash2 className="h-4 w-4 text-red-600" />
                     </Button>
                   </div>
@@ -634,14 +539,12 @@ export default function BalancesTab() {
           ) : (
             <div className="text-center py-8">
               <CreditCard className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">
-                No balances yet
-              </h3>
+              <h3 className="text-base md:text-lg font-medium text-gray-900 mb-2">No balances yet</h3>
               <p className="text-gray-500">User balances will appear here</p>
             </div>
           )}
         </CardContent>
       </Card>
     </div>
-  );
+  )
 }
