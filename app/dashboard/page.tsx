@@ -447,28 +447,32 @@ export default function DashboardPage() {
     <DashboardLayout currentSection="dashboard">
       <div className="min-h-screen bg-gradient-to-br from-orange-50 to-amber-50">
         {/* Hero Header */}
-        <div className="relative overflow-hidden bg-gradient-to-r from-[#F26623] via-[#E55A1F] to-[#D94E1A] rounded-2xl p-8 mb-8 shadow-2xl">
-          <div className="absolute inset-0 bg-black/10"></div>
-          <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full -translate-y-32 translate-x-32"></div>
-          <div className="absolute bottom-0 left-0 w-48 h-48 bg-white/5 rounded-full translate-y-24 -translate-x-24"></div>
-          <div className="relative z-10">
+        <div className="relative overflow-hidden bg-gradient-to-r from-[#F26623] via-[#E55A1F] to-[#D94E1A] rounded-2xl mb-8 shadow-2xl">
+          {/* overlays */}
+          <div className="absolute inset-0 bg-black/10" />
+          <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full -translate-y-32 translate-x-32" />
+          <div className="absolute bottom-0 left-0 w-48 h-48 bg-white/5 rounded-full translate-y-24 -translate-x-24" />
+
+          {/* logo pinned to the true top-right corner */}
+          <Image
+            src="/anchor3_white.svg"
+            alt="SecureBank Logo"
+            width={64}
+            height={64}
+            className="absolute top-2 right-2 h-24 w-auto hidden xs:block"  // adjust top/right as needed
+            priority
+          />
+
+          {/* content gets the padding */}
+          <div className="relative z-10 p-8">
             <div className="flex items-center justify-between mb-6">
-              <div>
-                <h1 className="text-2xl sm:text-4xl font-bold text-white mb-2">
-                  Welcome back, {user?.name || "Valued Client"}
-                </h1>
-                <p className="text-orange-100 text-sm sm:text-lg font-medium">
-                  Your comprehensive financial dashboard
-                </p>
-              </div>
-              <div className="hidden md:flex items-center space-x-4">
-                <div className="bg-white/20 backdrop-blur-sm rounded-full p-3">
-                  <TrendingUp className="h-8 w-8 text-white" />
-                </div>
-              </div>
+              <h1 className="text-2xl sm:text-4xl font-bold text-white mb-2">
+                Welcome back, {user?.name || "Valued Client"}
+              </h1>
             </div>
           </div>
         </div>
+
 
         {/* Currency Accounts Section */}
         <div className="mb-10">
@@ -804,38 +808,42 @@ export default function DashboardPage() {
                 </div>
               ) : recentTransactions.length > 0 ? (
                 <div className="space-y-4">
-                  {recentTransactions.map((transaction, index) => (
-                    <div
-                      key={transaction.id}
-                      className="bg-gradient-to-r from-[#F26623]/5 to-[#E55A1F]/10 rounded-xl p-6 border-2 border-[#F26623]/10 hover:border-[#F26623]/30 transition-all duration-300 hover:shadow-lg"
-                    >
-                      <div className="flex justify-between items-center">
-                        <div className="flex items-center space-x-4">
-                          <div className="bg-gradient-to-br from-[#F26623] to-[#E55A1F] rounded-full w-12 h-12 flex items-center justify-center text-white font-bold">
-                            {index + 1}
-                          </div>
-                          <div>
-                            <p className="font-bold text-gray-900 text-sm sm:text-lg">
-                              {transaction.type}
-                            </p>
-                            <div className="bg-[#F26623]/10 text-[#F26623] px-3 py-1 rounded-full text-xs font-semibold inline-block mt-1">
-                              {new Date(
-                                transaction.created_at
-                              ).toLocaleDateString()}
+                  {recentTransactions.map((transaction, index) => {
+                    const formattedType = transaction.type
+                      .split(" ")
+                      .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+                      .join(" ");
+                    return (
+                      <div
+                        key={transaction.id}
+                        className="bg-gradient-to-r from-[#F26623]/5 to-[#E55A1F]/10 rounded-xl p-6 border-2 border-[#F26623]/10 hover:border-[#F26623]/30 transition-all duration-300 hover:shadow-lg"
+                      >
+                        <div className="flex justify-between items-center">
+                          <div className="flex items-center space-x-4">
+                            <div className="bg-gradient-to-br from-[#F26623] to-[#E55A1F] rounded-full w-12 h-12 flex items-center justify-center text-white font-bold">
+                              {index + 1}
+                            </div>
+                            <div>
+                              <p className="font-bold text-gray-900 text-sm sm:text-lg">
+                                {formattedType}
+                              </p>
+                              <div className="bg-[#F26623]/10 text-[#F26623] px-3 py-1 rounded-full text-xs font-semibold inline-block mt-1">
+                                {new Date(transaction.created_at).toLocaleDateString()}
+                              </div>
                             </div>
                           </div>
-                        </div>
-                        <div className="text-right">
-                          <p className="text-lg sm:text-2xl font-bold text-gray-900">
-                            {transaction.amount} {transaction.currency}
-                          </p>
-                          <p className="text-[#F26623] font-bold">
-                            {transaction.type}
-                          </p>
+                          <div className="text-right">
+                            <p className="text-lg sm:text-2xl font-bold text-gray-900">
+                              {transaction.amount} {transaction.currency}
+                            </p>
+                            <p className="text-[#F26623] font-bold">
+                              {formattedType}
+                            </p>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
 
                   <div className="pt-6 border-t-2 border-[#F26623]/10 text-center">
                     <a
@@ -864,6 +872,7 @@ export default function DashboardPage() {
               )}
             </div>
           </div>
+
         </div>
       </div>
     </DashboardLayout>

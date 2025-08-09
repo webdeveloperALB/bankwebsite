@@ -67,13 +67,13 @@ export default function RegisterPage() {
         <div className="w-full max-w-md">
           <div className="text-center">
             <div className="flex items-center justify-center">
-              <div className="bg-[#F26623] p-6 rounded-2xl shadow-lg">
+              <div className=" p-6 rounded-2xl">
                 <Image
-                  src="/anchor2_white.svg"
+                  src="/anchor2.png"
                   alt="SecureBank Logo"
                   width={64}
                   height={64}
-                  className="h-16 w-16"
+                  className="h-24 w-56"
                 />
               </div>
             </div>
