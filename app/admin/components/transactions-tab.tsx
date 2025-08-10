@@ -199,7 +199,7 @@ export default function TransactionsTab() {
       const { error } = await supabase
         .from("transactions")
         .update({
-          status: "approved",
+          status: "completed", // Change from "approved" to "completed" for consistency
           approved_by: currentUser.id,
           approved_at: new Date().toISOString(),
         })
@@ -218,6 +218,19 @@ export default function TransactionsTab() {
         user_id: transaction.user_id,
         activity: `Transaction approved: ${transaction.type} ${transaction.amount} ${transaction.currency}`,
       })
+
+      // Force reload data to update UI immediately
+      const { data: transactionsData } = await supabase
+        .from("transactions")
+        .select(`
+        *,
+        users!transactions_user_id_fkey(name, email),
+        to_users:users!transactions_to_user_id_fkey(name, email),
+        approved_by_user:users!transactions_approved_by_fkey(name, email)
+      `)
+        .order("created_at", { ascending: false })
+
+      setTransactions(transactionsData || [])
 
       alert("Transaction approved successfully!")
     } catch (error) {
@@ -261,6 +274,19 @@ export default function TransactionsTab() {
         user_id: transaction.user_id,
         activity: `Transaction rejected: ${transaction.type} ${transaction.amount} ${transaction.currency}`,
       })
+
+      // Force reload data to update UI immediately
+      const { data: transactionsData } = await supabase
+        .from("transactions")
+        .select(`
+        *,
+        users!transactions_user_id_fkey(name, email),
+        to_users:users!transactions_to_user_id_fkey(name, email),
+        approved_by_user:users!transactions_approved_by_fkey(name, email)
+      `)
+        .order("created_at", { ascending: false })
+
+      setTransactions(transactionsData || [])
 
       alert("Transaction rejected successfully!")
     } catch (error) {
@@ -315,6 +341,7 @@ export default function TransactionsTab() {
           </Badge>
         )
       case "approved":
+      case "completed":
         return (
           <Badge variant="outline" className="text-green-600 border-green-600">
             <CheckCircle className="h-3 w-3 mr-1" />
@@ -326,13 +353,6 @@ export default function TransactionsTab() {
           <Badge variant="outline" className="text-red-600 border-red-600">
             <XCircle className="h-3 w-3 mr-1" />
             Rejected
-          </Badge>
-        )
-      case "completed":
-        return (
-          <Badge variant="outline" className="text-blue-600 border-blue-600">
-            <Check className="h-3 w-3 mr-1" />
-            Completed
           </Badge>
         )
       default:
@@ -350,7 +370,7 @@ export default function TransactionsTab() {
 
   const totalTransactions = transactions.length
   const pendingTransactions = transactions.filter((t) => t.status === "pending").length
-  const approvedTransactions = transactions.filter((t) => t.status === "approved").length
+  const approvedTransactions = transactions.filter((t) => t.status === "approved" || t.status === "completed").length
   const rejectedTransactions = transactions.filter((t) => t.status === "rejected").length
 
   return (
@@ -549,14 +569,150 @@ export default function TransactionsTab() {
                               <span className="block sm:inline"> → {transaction.to_users.name}</span>
                             )}
                           </p>
+
+                          {/* Transaction Subtype */}
                           {transaction.transaction_subtype && (
-                            <p className="text-xs text-gray-500 mt-1">Type: {transaction.transaction_subtype}</p>
+                            <div className="mt-2">
+                              <span className="inline-block bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs font-semibold">
+                                {transaction.transaction_subtype === "inside_bank"
+                                  ? "Currency Conversion"
+                                  : transaction.transaction_subtype === "outside_bank"
+                                    ? "External Bank Transfer"
+                                    : transaction.transaction_subtype}
+                              </span>
+                            </div>
                           )}
-                          {transaction.beneficiary_name && (
-                            <p className="text-xs text-gray-500 mt-1">Beneficiary: {transaction.beneficiary_name}</p>
+
+                          {/* Outside Bank Transfer Details */}
+                          {transaction.transaction_subtype === "outside_bank" && (
+                            <div className="mt-2 p-3 bg-gray-50 rounded-lg border">
+                              <h4 className="text-xs font-semibold text-gray-700 mb-2">External Transfer Details:</h4>
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                                {transaction.beneficiary_name && (
+                                  <div>
+                                    <span className="font-medium text-gray-600">Beneficiary:</span>
+                                    <span className="ml-1 text-gray-900">{transaction.beneficiary_name}</span>
+                                  </div>
+                                )}
+                                {transaction.beneficiary_bank && (
+                                  <div>
+                                    <span className="font-medium text-gray-600">Bank:</span>
+                                    <span className="ml-1 text-gray-900">{transaction.beneficiary_bank}</span>
+                                  </div>
+                                )}
+                                {transaction.beneficiary_iban && (
+                                  <div>
+                                    <span className="font-medium text-gray-600">IBAN:</span>
+                                    <span className="ml-1 text-gray-900 font-mono">{transaction.beneficiary_iban}</span>
+                                  </div>
+                                )}
+                                {transaction.beneficiary_swift && (
+                                  <div>
+                                    <span className="font-medium text-gray-600">SWIFT:</span>
+                                    <span className="ml-1 text-gray-900 font-mono">
+                                      {transaction.beneficiary_swift}
+                                    </span>
+                                  </div>
+                                )}
+                              </div>
+                              {transaction.beneficiary_address && (
+                                <div className="mt-2 text-xs">
+                                  <span className="font-medium text-gray-600">Address:</span>
+                                  <p className="ml-1 text-gray-900 mt-1">{transaction.beneficiary_address}</p>
+                                </div>
+                              )}
+                            </div>
                           )}
-                          <p className="text-xs text-gray-500 mt-1">
-                            {new Date(transaction.created_at).toLocaleDateString()}
+
+                          {/* Withdrawal Details */}
+                          {transaction.type === "withdrawal" && (
+                            <div className="mt-2 p-3 bg-red-50 rounded-lg border border-red-200">
+                              <h4 className="text-xs font-semibold text-red-700 mb-2">Withdrawal Details:</h4>
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                                {transaction.beneficiary_name && (
+                                  <div>
+                                    <span className="font-medium text-red-600">Account Holder:</span>
+                                    <span className="ml-1 text-gray-900">{transaction.beneficiary_name}</span>
+                                  </div>
+                                )}
+                                {transaction.beneficiary_bank && (
+                                  <div>
+                                    <span className="font-medium text-red-600">Bank:</span>
+                                    <span className="ml-1 text-gray-900">{transaction.beneficiary_bank}</span>
+                                  </div>
+                                )}
+                                {transaction.beneficiary_iban && (
+                                  <div>
+                                    <span className="font-medium text-red-600">IBAN:</span>
+                                    <span className="ml-1 text-gray-900 font-mono">{transaction.beneficiary_iban}</span>
+                                  </div>
+                                )}
+                                {transaction.beneficiary_swift && (
+                                  <div>
+                                    <span className="font-medium text-red-600">SWIFT:</span>
+                                    <span className="ml-1 text-gray-900 font-mono">
+                                      {transaction.beneficiary_swift}
+                                    </span>
+                                  </div>
+                                )}
+                              </div>
+                              {transaction.beneficiary_address && (
+                                <div className="mt-2 text-xs">
+                                  <span className="font-medium text-red-600">Address:</span>
+                                  <p className="ml-1 text-gray-900 mt-1">{transaction.beneficiary_address}</p>
+                                </div>
+                              )}
+                            </div>
+                          )}
+
+                          {/* Inside Bank Transfer Details */}
+                          {transaction.transaction_subtype === "inside_bank" && (
+                            <div className="mt-2 p-3 bg-purple-50 rounded-lg border border-purple-200">
+                              <h4 className="text-xs font-semibold text-purple-700 mb-2">Currency Conversion:</h4>
+                              <div className="flex items-center text-xs">
+                                <span className="font-medium text-purple-600">From:</span>
+                                <span className="ml-1 px-2 py-1 bg-purple-100 rounded text-purple-800 font-mono">
+                                  {transaction.from_currency || transaction.currency}
+                                </span>
+                                <span className="mx-2 text-purple-600">→</span>
+                                <span className="font-medium text-purple-600">To:</span>
+                                <span className="ml-1 px-2 py-1 bg-purple-100 rounded text-purple-800 font-mono">
+                                  {transaction.to_currency}
+                                </span>
+                              </div>
+                              {transaction.exchange_rate && (
+                                <div className="mt-1 text-xs">
+                                  <span className="font-medium text-purple-600">Rate:</span>
+                                  <span className="ml-1 text-gray-900">{transaction.exchange_rate}</span>
+                                </div>
+                              )}
+                            </div>
+                          )}
+
+                          {/* Notes */}
+                          {transaction.notes && (
+                            <div className="mt-2 p-2 bg-yellow-50 rounded border border-yellow-200">
+                              <span className="text-xs font-medium text-yellow-700">Notes:</span>
+                              <p className="text-xs text-gray-900 mt-1">{transaction.notes}</p>
+                            </div>
+                          )}
+
+                          {/* Approval Information */}
+                          {transaction.approved_by && (
+                            <div className="mt-2 text-xs text-gray-500">
+                              <span className="font-medium">Approved by:</span>
+                              <span className="ml-1">{transaction.approved_by_user?.name || "Admin"}</span>
+                              {transaction.approved_at && (
+                                <span className="ml-2">
+                                  on {new Date(transaction.approved_at).toLocaleDateString()}
+                                </span>
+                              )}
+                            </div>
+                          )}
+
+                          <p className="text-xs text-gray-500 mt-2">
+                            Created: {new Date(transaction.created_at).toLocaleDateString()} at{" "}
+                            {new Date(transaction.created_at).toLocaleTimeString()}
                           </p>
                         </div>
                       </div>

@@ -76,6 +76,8 @@ export default function TransactionsPage() {
   const [transferCurrency, setTransferCurrency] = useState("")
 
   useEffect(() => {
+    let pollInterval: NodeJS.Timeout
+
     const loadData = async () => {
       try {
         const currentUser = await getCurrentUser()
@@ -111,8 +113,32 @@ export default function TransactionsPage() {
           })
           .subscribe()
 
+        // Set up polling every second to check for changes
+        pollInterval = setInterval(async () => {
+          try {
+            // Reload transactions
+            const { data: transactionsData } = await supabase
+              .from("transactions")
+              .select("*")
+              .or(`user_id.eq.${currentUser.id},to_user_id.eq.${currentUser.id}`)
+              .order("created_at", { ascending: false })
+
+            setTransactions(transactionsData || [])
+
+            // Reload balances
+            const { data: balancesData } = await supabase.from("balances").select("*").eq("user_id", currentUser.id)
+
+            setBalances(balancesData || [])
+          } catch (error) {
+            console.error("Error polling for updates:", error)
+          }
+        }, 1000) // Poll every 1 second
+
         return () => {
           supabase.removeChannel(channel)
+          if (pollInterval) {
+            clearInterval(pollInterval)
+          }
         }
       } catch (error) {
         console.error("Error loading transactions:", error)
@@ -122,10 +148,222 @@ export default function TransactionsPage() {
     }
 
     loadData()
+
+    // Cleanup function for the useEffect
+    return () => {
+      if (pollInterval) {
+        clearInterval(pollInterval)
+      }
+    }
   }, [])
 
   const handleDeposit = () => {
     router.push("/dashboard/deposits")
+  }
+
+  const generatePDFStatement = async () => {
+    if (!user || !transactions.length) {
+      alert("No data available for export")
+      return
+    }
+
+    try {
+      // Import jsPDF
+      const { default: jsPDF } = await import("jspdf")
+
+      // Import and initialize autoTable
+      const autoTable = (await import("jspdf-autotable")).default
+
+      // Create new PDF document
+      const doc = new jsPDF()
+      const pageWidth = doc.internal.pageSize.width
+      const pageHeight = doc.internal.pageSize.height
+
+      // Header Section
+      doc.setFillColor(242, 102, 35) // Orange color
+      doc.rect(0, 0, pageWidth, 40, "F")
+
+      // Bank Logo/Name
+      doc.setTextColor(255, 255, 255)
+      doc.setFontSize(24)
+      doc.setFont("helvetica", "bold")
+      doc.text("SecureBank", 20, 25)
+
+      // Statement Title
+      doc.setFontSize(16)
+      doc.text("Account Statement", pageWidth - 20, 25, { align: "right" })
+
+      // Reset text color
+      doc.setTextColor(0, 0, 0)
+
+      // User Information Section
+      let yPos = 60
+      doc.setFontSize(12)
+      doc.setFont("helvetica", "bold")
+      doc.text("Account Holder:", 20, yPos)
+      doc.setFont("helvetica", "normal")
+      doc.text(user.name, 80, yPos)
+
+      yPos += 8
+      doc.setFont("helvetica", "bold")
+      doc.text("Account ID:", 20, yPos)
+      doc.setFont("helvetica", "normal")
+      doc.text(user.id.slice(0, 12), 80, yPos)
+
+      yPos += 8
+      doc.setFont("helvetica", "bold")
+      doc.text("Email:", 20, yPos)
+      doc.setFont("helvetica", "normal")
+      doc.text(user.email, 80, yPos)
+
+      // Statement Period
+      const firstTransaction = transactions[transactions.length - 1]
+      const lastTransaction = transactions[0]
+      const startDate = firstTransaction ? new Date(firstTransaction.created_at).toLocaleDateString() : "N/A"
+      const endDate = lastTransaction ? new Date(lastTransaction.created_at).toLocaleDateString() : "N/A"
+
+      yPos += 8
+      doc.setFont("helvetica", "bold")
+      doc.text("Statement Period:", 20, yPos)
+      doc.setFont("helvetica", "normal")
+      doc.text(`${startDate} - ${endDate}`, 80, yPos)
+
+      yPos += 8
+      doc.setFont("helvetica", "bold")
+      doc.text("Export Date:", 20, yPos)
+      doc.setFont("helvetica", "normal")
+      doc.text(new Date().toLocaleDateString(), 80, yPos)
+
+      // Summary Section
+      yPos += 20
+      doc.setFillColor(248, 249, 250)
+      doc.rect(15, yPos - 5, pageWidth - 30, 50, "F")
+
+      doc.setFont("helvetica", "bold")
+      doc.setFontSize(14)
+      doc.text("Account Summary", 20, yPos + 5)
+
+      yPos += 15
+      doc.setFontSize(10)
+
+      // Calculate totals
+      const totalTransactions = transactions.length
+      const totalDeposits = transactions
+        .filter((t) => t.type === "deposit" || (t.type === "transfer" && t.to_user_id === user.id))
+        .reduce((sum, t) => sum + Number(t.amount), 0)
+      const totalWithdrawals = transactions
+        .filter((t) => t.type === "withdrawal" || (t.type === "transfer" && t.user_id === user.id))
+        .reduce((sum, t) => sum + Number(t.amount), 0)
+
+      doc.text(`Total Transactions: ${totalTransactions}`, 20, yPos)
+      doc.text(`Total Deposits: $${totalDeposits.toFixed(2)}`, 20, yPos + 8)
+      doc.text(`Total Withdrawals: $${totalWithdrawals.toFixed(2)}`, 20, yPos + 16)
+
+      // Current Balances
+      yPos += 8
+      doc.text("Current Balances:", 120, yPos)
+      balances.forEach((balance, index) => {
+        doc.text(`${balance.currency}: ${Number(balance.amount).toFixed(2)}`, 120, yPos + 8 + index * 8)
+      })
+
+      // Transaction History Table
+      yPos += 60
+
+      const tableColumns = ["Date/Time", "Type", "Amount", "Currency", "Status", "Notes"]
+      const tableRows = transactions.map((transaction) => {
+        const isIncoming = transaction.type === "deposit" || transaction.to_user_id === user.id
+        const sign = isIncoming ? "+" : "-"
+        const amount = `${sign}${Number(transaction.amount).toFixed(2)}`
+
+        let transactionType = transaction.type
+        if (transaction.type === "transfer") {
+          if (transaction.transaction_subtype === "inside_bank") {
+            transactionType = "Currency Conv."
+          } else if (transaction.transaction_subtype === "outside_bank") {
+            transactionType = "External Transfer"
+          }
+        }
+
+        const notes =
+          transaction.beneficiary_name ||
+          (transaction.transaction_subtype === "inside_bank"
+            ? `${transaction.from_currency} to ${transaction.to_currency}`
+            : "-")
+
+        return [
+          new Date(transaction.created_at).toLocaleString(),
+          transactionType,
+          amount,
+          transaction.currency,
+          transaction.status || "Completed",
+          notes,
+        ]
+      })
+
+      // Use autoTable function directly
+      autoTable(doc, {
+        head: [tableColumns],
+        body: tableRows,
+        startY: yPos,
+        styles: {
+          fontSize: 8,
+          cellPadding: 3,
+        },
+        headStyles: {
+          fillColor: [242, 102, 35],
+          textColor: [255, 255, 255],
+          fontStyle: "bold",
+        },
+        alternateRowStyles: {
+          fillColor: [248, 249, 250],
+        },
+        columnStyles: {
+          0: { cellWidth: 35 },
+          1: { cellWidth: 25 },
+          2: { cellWidth: 20 },
+          3: { cellWidth: 15 },
+          4: { cellWidth: 20 },
+          5: { cellWidth: 35 },
+        },
+      })
+
+      // Footer
+      const finalY = (doc as any).lastAutoTable?.finalY || yPos + 100
+
+      if (finalY > pageHeight - 60) {
+        doc.addPage()
+        yPos = 30
+      } else {
+        yPos = finalY + 20
+      }
+
+      doc.setFillColor(242, 102, 35)
+      doc.rect(0, yPos, pageWidth, 40, "F")
+
+      doc.setTextColor(255, 255, 255)
+      doc.setFontSize(10)
+      doc.setFont("helvetica", "normal")
+      doc.text(
+        "This statement is generated electronically and is valid without a signature.",
+        pageWidth / 2,
+        yPos + 15,
+        {
+          align: "center",
+        },
+      )
+      doc.text("For support contact: support@securebank.com | Phone: +1 (555) 123-4567", pageWidth / 2, yPos + 25, {
+        align: "center",
+      })
+
+      // Save the PDF
+      const fileName = `Account_Statement_${user.name.replace(/\s+/g, "_")}_${new Date().toISOString().split("T")[0]}.pdf`
+      doc.save(fileName)
+
+      alert("PDF statement generated successfully!")
+    } catch (error) {
+      console.error("Error generating PDF:", error)
+      alert("Failed to generate PDF. Please try again.")
+    }
   }
 
   const handleInsideBankTransfer = async (e: React.FormEvent) => {
@@ -362,9 +600,9 @@ export default function TransactionsPage() {
         )
       case "completed":
         return (
-          <Badge variant="outline" className="text-blue-600 border-blue-600">
+          <Badge variant="outline" className="text-green-600 border-green-600">
             <CheckCircle className="h-3 w-3 mr-1" />
-            Completed
+            Approved
           </Badge>
         )
       default:
@@ -788,6 +1026,7 @@ export default function TransactionsPage() {
 
               <div className="flex flex-col sm:flex-row gap-3">
                 <Button
+                  onClick={generatePDFStatement}
                   variant="outline"
                   className="bg-white/20 border-white/30 text-white hover:bg-white/30 hover:text-white backdrop-blur-sm font-semibold"
                 >
