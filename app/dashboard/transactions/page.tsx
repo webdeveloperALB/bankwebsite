@@ -339,7 +339,7 @@ export default function TransactionsPage() {
           align: "center",
         },
       )
-      doc.text("For support contact: support@securebank.com | Phone: +1 (555) 123-4567", pageWidth / 2, yPos + 25, {
+      doc.text("For support contact: support@AnchorGroupInvestments.com | Phone: +1 (555) 123-4567", pageWidth / 2, yPos + 25, {
         align: "center",
       })
 

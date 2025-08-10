@@ -9,7 +9,7 @@ export async function GET(request: NextRequest) {
       const response = await fetch("https://ipapi.co/json/", {
         headers: {
           'Accept': 'application/json',
-          'User-Agent': 'SecureBank-Client/1.0',
+          'User-Agent': 'Anchor Group Investments-Client/1.0',
         },
       });
 
@@ -42,7 +42,7 @@ export async function GET(request: NextRequest) {
       const backupResponse = await fetch("https://ipinfo.io/json", {
         headers: {
           'Accept': 'application/json',
-          'User-Agent': 'SecureBank-Client/1.0',
+          'User-Agent': 'Anchor Group Investments-Client/1.0',
         },
       });
 

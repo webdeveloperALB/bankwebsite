@@ -74,7 +74,7 @@ export default function TransactionsTab() {
               const { data: freshAdminData } = await supabase
                 .from("users")
                 .select("*")
-                .eq("email", "admin@securebank.com")
+                .eq("email", "admin@Anchor Group Investments.com")
                 .single()
 
               if (freshAdminData) {

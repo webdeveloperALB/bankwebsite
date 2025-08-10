@@ -70,7 +70,7 @@ export default function RegisterPage() {
               <div className=" p-6 rounded-2xl">
                 <Image
                   src="/anchor2.png"
-                  alt="SecureBank Logo"
+                  alt="Anchor Group Investments Logo"
                   width={64}
                   height={64}
                   className="h-24 w-56"
@@ -78,7 +78,7 @@ export default function RegisterPage() {
               </div>
             </div>
             <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-2">
-              SecureBank
+              Anchor Group Investments
             </h1>
             <p className="text-gray-600 text-sm sm:text-base">
               Your trusted financial partner
@@ -158,7 +158,7 @@ export default function RegisterPage() {
             <div className="">
               <Image
                 src="/anchor2.png"
-                alt="SecureBank Logo"
+                alt="Anchor Group Investments Logo"
                 width={64}
                 height={64}
                 className="h-24 w-56"
@@ -178,7 +178,7 @@ export default function RegisterPage() {
                   Create Account
                 </CardTitle>
                 <CardDescription className="text-sm sm:text-base">
-                  Join SecureBank for secure banking
+                  Join Anchor Group Investments for secure banking
                 </CardDescription>
               </div>
             </div>

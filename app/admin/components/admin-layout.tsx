@@ -118,7 +118,7 @@ export default function AdminLayout({ children, activeTab, onTabChange }: AdminL
             <div className="flex items-center justify-between p-4 border-b">
               <div className="flex items-center">
                 <Banknote className="h-6 w-6 text-[#F26623]" />
-                <span className="ml-2 text-lg font-bold text-gray-900">SecureBank</span>
+                <span className="ml-2 text-lg font-bold text-gray-900">Anchor Group Investments</span>
               </div>
               <button onClick={() => setIsMobileMenuOpen(false)} className="p-2 rounded-md hover:bg-gray-100">
                 <X className="h-5 w-5" />
@@ -171,7 +171,7 @@ export default function AdminLayout({ children, activeTab, onTabChange }: AdminL
                   <Menu className="h-5 w-5" />
                 </button>
                 <Banknote className="h-5 w-5 sm:h-6 sm:w-6 text-[#F26623]" />
-                <span className="ml-2 text-sm sm:text-base font-bold text-gray-900 truncate">SecureBank Admin</span>
+                <span className="ml-2 text-sm sm:text-base font-bold text-gray-900 truncate">Anchor Group Investments Admin</span>
               </div>
 
               <div className="flex items-center space-x-2">
@@ -208,7 +208,7 @@ export default function AdminLayout({ children, activeTab, onTabChange }: AdminL
             <div className="flex justify-between items-center h-16">
               <div className="flex items-center">
                 <Banknote className="h-8 w-8 text-[#F26623]" />
-                <span className="ml-2 text-xl font-bold text-gray-900">SecureBank Admin</span>
+                <span className="ml-2 text-xl font-bold text-gray-900">Anchor Group Investments Admin</span>
               </div>
 
               <div className="flex items-center space-x-6">

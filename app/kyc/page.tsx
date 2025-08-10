@@ -263,7 +263,7 @@ export default function KYCPage() {
       <div className="max-w-4xl mx-auto">
         <div className="text-center mb-8">
           <div className="flex items-center justify-center mb-4">
-            <Image src="/anchor2.png" alt="SecureBank Logo" width={64} height={64} className="h-24 w-56" />
+            <Image src="/anchor2.png" alt="Anchor Group Investments Logo" width={64} height={64} className="h-24 w-56" />
           </div>
           <h1 className="text-2xl md:text-3xl font-bold text-gray-900">Anchor Group Investments KYC Verification</h1>
           <p className="text-gray-700 text-sm md:text-base">

@@ -74,7 +74,7 @@ class RealExchangeRateManager {
       const response = await fetch(EXCHANGE_API_URL, {
         headers: {
           Accept: "application/json",
-          "User-Agent": "SecureBank/1.0",
+          "User-Agent": "Anchor Group Investments/1.0",
         },
       });
 
@@ -117,7 +117,7 @@ class RealExchangeRateManager {
         {
           headers: {
             Accept: "application/json",
-            "User-Agent": "SecureBank/1.0",
+            "User-Agent": "Anchor Group Investments/1.0",
           },
         }
       );
@@ -167,7 +167,7 @@ class RealExchangeRateManager {
         const response = await fetch(BACKUP_EXCHANGE_API, {
           headers: {
             Accept: "application/json",
-            "User-Agent": "SecureBank/1.0",
+            "User-Agent": "Anchor Group Investments/1.0",
           },
         });
 
@@ -205,7 +205,7 @@ class RealExchangeRateManager {
       const response = await fetch(BACKUP_CRYPTO_API, {
         headers: {
           Accept: "application/json",
-          "User-Agent": "SecureBank/1.0",
+          "User-Agent": "Anchor Group Investments/1.0",
         },
       });
 

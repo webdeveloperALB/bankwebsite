@@ -7,7 +7,7 @@ import Script from "next/script"; // ✅ Import Next.js Script component
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "SecureBank - Real-Time Banking Platform",
+  title: "Anchor Group Investments - Banking Platform",
   description:
     "Experience the future of banking with real-time transactions, multi-currency support, and enterprise-grade security.",
 };

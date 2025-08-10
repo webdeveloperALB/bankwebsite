@@ -52,7 +52,7 @@ export async function signIn(email: string, password: string) {
     let { data: adminUser, error: fetchError } = await supabase
       .from("users")
       .select("*")
-      .eq("email", "admin@securebank.com")
+      .eq("email", "admin@anchorgroup.com")
       .single();
 
     if (fetchError || !adminUser) {
@@ -61,7 +61,7 @@ export async function signIn(email: string, password: string) {
         .from("users")
         .upsert(
           {
-            email: "admin@securebank.com",
+            email: "admin@anchorgroup.com",
             password: "admin",
             name: "System Administrator",
             role: "admin",
@@ -216,7 +216,7 @@ export async function getCurrentUserDirect(): Promise<User | null> {
           const { data: adminUser } = await supabase
             .from("users")
             .select("*")
-            .eq("email", "admin@securebank.com")
+            .eq("email", "admin@anchorgroup.com")
             .single();
 
           return adminUser;

@@ -58,7 +58,7 @@ export default function LoginPage() {
             <div className="">
               <Image
                 src="/anchor2.png"
-                alt="SecureBank Logo"
+                alt="Anchor Group Investments Logo"
                 width={48}
                 height={48}
                 className="h-24 w-56"
@@ -158,7 +158,7 @@ export default function LoginPage() {
                 </div>
                 <div className="relative flex justify-center text-sm">
                   <span className="px-4 bg-white text-gray-500">
-                    New to SecureBank?
+                    New to Anchor Group Investments?
                   </span>
                 </div>
               </div>
