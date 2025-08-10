@@ -1,162 +1,141 @@
-"use client";
+"use client"
 
-import { useEffect, useState, useRef } from "react";
-import { supabase } from "@/lib/supabase";
-import { getCurrentUser } from "@/lib/auth";
-import DashboardLayout from "@/components/dashboard-layout";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import {
-  MessageSquare,
-  Send,
-  User,
-  Shield,
-  Mail,
-  Clock,
-  CheckCircle,
-  AlertCircle,
-  RefreshCw,
-} from "lucide-react";
-import { Database } from "@/lib/supabase";
+import type React from "react"
 
-type User = Database["public"]["Tables"]["users"]["Row"];
-type Message = Database["public"]["Tables"]["messages"]["Row"];
+import { useEffect, useState, useRef } from "react"
+import { supabase } from "@/lib/supabase"
+import { getCurrentUser } from "@/lib/auth"
+import DashboardLayout from "@/components/dashboard-layout"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
+import { Label } from "@/components/ui/label"
+import { Textarea } from "@/components/ui/textarea"
+import { MessageSquare, Send, Shield, Mail, Clock, CheckCircle, AlertCircle, RefreshCw } from "lucide-react"
+import type { Database } from "@/lib/supabase"
+
+type UserType = Database["public"]["Tables"]["users"]["Row"]
+type Message = Database["public"]["Tables"]["messages"]["Row"]
 
 export default function MessagesPage() {
-  const [user, setUser] = useState<User | null>(null);
-  const [messages, setMessages] = useState<Message[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const [sending, setSending] = useState(false);
-  const [newMessage, setNewMessage] = useState("");
-  const [autoRefreshEnabled, setAutoRefreshEnabled] = useState(true);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
-  const autoRefreshIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const [user, setUser] = useState<UserType | null>(null)
+  const [messages, setMessages] = useState<Message[]>([])
+  const [loading, setLoading] = useState(true)
+  const [refreshing, setRefreshing] = useState(false)
+  const [sending, setSending] = useState(false)
+  const [newMessage, setNewMessage] = useState("")
+  const [autoRefreshEnabled, setAutoRefreshEnabled] = useState(true)
+  const messagesEndRef = useRef<HTMLDivElement>(null)
+  const autoRefreshIntervalRef = useRef<NodeJS.Timeout | null>(null)
 
   const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  };
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
+  }
 
-  const loadMessages = async (currentUser: User, silent = false) => {
+  const loadMessages = async (currentUser: UserType, silent = false) => {
     try {
-      if (!silent) console.log("📨 Client loading messages...");
+      if (!silent) console.log("📨 Client loading messages...")
 
       const { data: messagesData } = await supabase
         .from("messages")
         .select("*")
         .eq("user_id", currentUser.id)
-        .order("created_at", { ascending: true });
+        .order("created_at", { ascending: true })
 
-      if (!silent)
-        console.log("📨 Client loaded messages:", messagesData?.length);
+      if (!silent) console.log("📨 Client loaded messages:", messagesData?.length)
 
       // Only update if there are actual changes to prevent unnecessary re-renders
       setMessages((prevMessages) => {
-        if (
-          JSON.stringify(prevMessages) !== JSON.stringify(messagesData || [])
-        ) {
-          setTimeout(scrollToBottom, 100);
-          return messagesData || [];
+        if (JSON.stringify(prevMessages) !== JSON.stringify(messagesData || [])) {
+          setTimeout(scrollToBottom, 100)
+          return messagesData || []
         }
-        return prevMessages;
-      });
+        return prevMessages
+      })
 
-      return messagesData || [];
+      return messagesData || []
     } catch (error) {
-      if (!silent) console.error("❌ Error loading messages:", error);
-      return [];
+      if (!silent) console.error("❌ Error loading messages:", error)
+      return []
     }
-  };
+  }
 
   // Auto-refresh function (silent to avoid spam logs)
   const autoRefresh = async () => {
-    if (!autoRefreshEnabled || !user) return;
+    if (!autoRefreshEnabled || !user) return
 
     try {
-      await loadMessages(user, true);
+      await loadMessages(user, true)
     } catch (error) {
-      console.error("❌ Client auto-refresh failed:", error);
+      console.error("❌ Client auto-refresh failed:", error)
     }
-  };
+  }
 
   // Manual refresh function
   const handleRefresh = async () => {
-    if (!user) return;
+    if (!user) return
 
-    setRefreshing(true);
-    console.log("🔄 Client manually refreshing messages...");
+    setRefreshing(true)
+    console.log("🔄 Client manually refreshing messages...")
 
     try {
-      await loadMessages(user, false);
-      console.log("✅ Client refresh completed");
+      await loadMessages(user, false)
+      console.log("✅ Client refresh completed")
     } catch (error) {
-      console.error("❌ Client refresh failed:", error);
+      console.error("❌ Client refresh failed:", error)
     } finally {
-      setRefreshing(false);
+      setRefreshing(false)
     }
-  };
+  }
 
   // Toggle auto-refresh
   const toggleAutoRefresh = () => {
-    setAutoRefreshEnabled(!autoRefreshEnabled);
-    console.log(
-      "🔄 Client auto-refresh:",
-      !autoRefreshEnabled ? "ENABLED" : "DISABLED"
-    );
-  };
+    setAutoRefreshEnabled(!autoRefreshEnabled)
+    console.log("🔄 Client auto-refresh:", !autoRefreshEnabled ? "ENABLED" : "DISABLED")
+  }
 
   useEffect(() => {
     const initializeData = async () => {
       try {
-        const currentUser = await getCurrentUser();
-        if (!currentUser) return;
+        const currentUser = await getCurrentUser()
+        if (!currentUser) return
 
-        setUser(currentUser);
-        await loadMessages(currentUser, false);
+        setUser(currentUser)
+        await loadMessages(currentUser, false)
       } catch (error) {
-        console.error("Error loading messages:", error);
+        console.error("Error loading messages:", error)
       } finally {
-        setLoading(false);
+        setLoading(false)
       }
-    };
+    }
 
-    initializeData();
-  }, []);
+    initializeData()
+  }, [])
 
   // Auto-refresh every second
   useEffect(() => {
     if (autoRefreshEnabled && user) {
-      console.log("🔄 Client starting auto-refresh every 1 second");
-      autoRefreshIntervalRef.current = setInterval(autoRefresh, 1000);
+      console.log("🔄 Client starting auto-refresh every 1 second")
+      autoRefreshIntervalRef.current = setInterval(autoRefresh, 1000)
     } else {
       if (autoRefreshIntervalRef.current) {
-        clearInterval(autoRefreshIntervalRef.current);
-        autoRefreshIntervalRef.current = null;
+        clearInterval(autoRefreshIntervalRef.current)
+        autoRefreshIntervalRef.current = null
       }
     }
 
     return () => {
       if (autoRefreshIntervalRef.current) {
-        clearInterval(autoRefreshIntervalRef.current);
-        autoRefreshIntervalRef.current = null;
+        clearInterval(autoRefreshIntervalRef.current)
+        autoRefreshIntervalRef.current = null
       }
-    };
-  }, [autoRefreshEnabled, user]);
+    }
+  }, [autoRefreshEnabled, user])
 
   // Real-time subscription as backup
   useEffect(() => {
-    if (!user) return;
+    if (!user) return
 
-    console.log("📡 Client setting up real-time subscription as backup...");
+    console.log("📡 Client setting up real-time subscription as backup...")
     const messagesChannel = supabase
       .channel(`user_messages_backup_${user.id}`, {
         config: {
@@ -173,65 +152,61 @@ export default function MessagesPage() {
           filter: `user_id=eq.${user.id}`,
         },
         (payload) => {
-          console.log("🔄 Client real-time backup update:", payload.eventType);
+          console.log("🔄 Client real-time backup update:", payload.eventType)
           // Just trigger a refresh instead of complex logic
-          autoRefresh();
-        }
+          autoRefresh()
+        },
       )
       .subscribe((status) => {
-        console.log("📡 Client backup subscription status:", status);
-      });
+        console.log("📡 Client backup subscription status:", status)
+      })
 
     return () => {
-      console.log("🔌 Client cleaning up backup subscription...");
-      supabase.removeChannel(messagesChannel);
-    };
-  }, [user]);
+      console.log("🔌 Client cleaning up backup subscription...")
+      supabase.removeChannel(messagesChannel)
+    }
+  }, [user])
 
   const handleSendMessage = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!user || !newMessage.trim()) return;
+    e.preventDefault()
+    if (!user || !newMessage.trim()) return
 
-    setSending(true);
-    console.log("📤 Client sending message:", newMessage.trim());
+    setSending(true)
+    console.log("📤 Client sending message:", newMessage.trim())
 
     try {
       const messageData = {
         user_id: user.id,
         from_admin: false,
         message: newMessage.trim(),
-      };
+      }
 
-      const { data, error } = await supabase
-        .from("messages")
-        .insert(messageData)
-        .select()
-        .single();
+      const { data, error } = await supabase.from("messages").insert(messageData).select().single()
 
-      if (error) throw error;
+      if (error) throw error
 
-      console.log("✅ Client message sent successfully:", data);
+      console.log("✅ Client message sent successfully:", data)
 
       // Log activity
       await supabase.from("activity_logs").insert({
         user_id: user.id,
         activity: "Sent message to support",
-      });
+      })
 
-      setNewMessage("");
+      setNewMessage("")
 
       // Force immediate refresh after sending
       setTimeout(() => {
-        autoRefresh();
-        scrollToBottom();
-      }, 100);
+        autoRefresh()
+        scrollToBottom()
+      }, 100)
     } catch (error) {
-      console.error("Error sending message:", error);
-      alert("Failed to send message. Please try again.");
+      console.error("Error sending message:", error)
+      alert("Failed to send message. Please try again.")
     } finally {
-      setSending(false);
+      setSending(false)
     }
-  };
+  }
 
   return (
     <DashboardLayout currentSection="messages">
@@ -253,9 +228,7 @@ export default function MessagesPage() {
                     Support Messages
                   </h1>
                   <p className="text-orange-100 text-xs sm:text-sm md:text-base lg:text-lg font-medium">
-                    <span className="hidden sm:inline">
-                      Real-time chat with auto-refresh every second
-                    </span>
+                    <span className="hidden sm:inline">Real-time chat with auto-refresh every second</span>
                     <span className="sm:hidden">Live support chat</span>
                   </p>
                 </div>
@@ -266,27 +239,19 @@ export default function MessagesPage() {
                 {/* Auto-refresh toggle */}
                 <Button
                   onClick={toggleAutoRefresh}
-                  className={`${
-                    autoRefreshEnabled
+                  className={`${autoRefreshEnabled
                       ? "bg-green-500/20 hover:bg-green-500/30 text-green-100 border-green-300/30"
                       : "bg-red-500/20 hover:bg-red-500/30 text-red-100 border-red-300/30"
-                  } backdrop-blur-sm text-xs sm:text-sm px-2 sm:px-3 py-1 sm:py-2`}
+                    } backdrop-blur-sm text-xs sm:text-sm px-2 sm:px-3 py-1 sm:py-2`}
                   variant="outline"
                   size="sm"
                 >
                   <div
-                    className={`w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full mr-1 sm:mr-2 ${
-                      autoRefreshEnabled
-                        ? "bg-green-400 animate-pulse"
-                        : "bg-red-400"
-                    }`}
+                    className={`w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full mr-1 sm:mr-2 ${autoRefreshEnabled ? "bg-green-400 animate-pulse" : "bg-red-400"
+                      }`}
                   ></div>
-                  <span className="hidden sm:inline">
-                    {autoRefreshEnabled ? "Auto ON" : "Auto OFF"}
-                  </span>
-                  <span className="sm:hidden">
-                    {autoRefreshEnabled ? "ON" : "OFF"}
-                  </span>
+                  <span className="hidden sm:inline">{autoRefreshEnabled ? "Auto ON" : "Auto OFF"}</span>
+                  <span className="sm:hidden">{autoRefreshEnabled ? "ON" : "OFF"}</span>
                 </Button>
 
                 {/* Manual refresh button */}
@@ -297,14 +262,8 @@ export default function MessagesPage() {
                   variant="outline"
                   size="sm"
                 >
-                  <RefreshCw
-                    className={`h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2 ${
-                      refreshing ? "animate-spin" : ""
-                    }`}
-                  />
-                  <span className="hidden sm:inline">
-                    {refreshing ? "Refreshing..." : "Refresh"}
-                  </span>
+                  <RefreshCw className={`h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2 ${refreshing ? "animate-spin" : ""}`} />
+                  <span className="hidden sm:inline">{refreshing ? "Refreshing..." : "Refresh"}</span>
                   <span className="sm:hidden">↻</span>
                 </Button>
               </div>
@@ -336,9 +295,7 @@ export default function MessagesPage() {
                 <div className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900 mb-1 sm:mb-2">
                   {messages.length}
                 </div>
-                <p className="text-xs sm:text-sm text-gray-600">
-                  All conversations
-                </p>
+                <p className="text-xs sm:text-sm text-gray-600">All conversations</p>
               </CardContent>
             </div>
           </Card>
@@ -351,7 +308,7 @@ export default function MessagesPage() {
               <CardHeader className="p-0 mb-2 sm:mb-3 md:mb-4">
                 <div className="flex items-center justify-between">
                   <div className="bg-gradient-to-br from-[#F26623] to-[#E55A1F] rounded-lg sm:rounded-xl lg:rounded-2xl p-2 sm:p-2.5 lg:p-3 shadow-lg">
-                    <User className="h-4 w-4 sm:h-5 sm:w-5 lg:h-6 lg:w-6 text-white" />
+                    <Shield className="h-4 w-4 sm:h-5 sm:w-5 lg:h-6 lg:w-6 text-white" />
                   </div>
                   <div className="text-right">
                     <CardTitle className="text-xs sm:text-sm font-semibold text-gray-600">
@@ -365,9 +322,7 @@ export default function MessagesPage() {
                 <div className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900 mb-1 sm:mb-2">
                   {messages.filter((m) => !m.from_admin).length}
                 </div>
-                <p className="text-xs sm:text-sm text-gray-600">
-                  Messages sent by you
-                </p>
+                <p className="text-xs sm:text-sm text-gray-600">Messages sent by you</p>
               </CardContent>
             </div>
           </Card>
@@ -394,9 +349,7 @@ export default function MessagesPage() {
                 <div className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900 mb-1 sm:mb-2">
                   {messages.filter((m) => m.from_admin).length}
                 </div>
-                <p className="text-xs sm:text-sm text-gray-600">
-                  Professional responses
-                </p>
+                <p className="text-xs sm:text-sm text-gray-600">Professional responses</p>
               </CardContent>
             </div>
           </Card>
@@ -413,13 +366,9 @@ export default function MessagesPage() {
                     <MessageSquare className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
                   </div>
                   <div>
-                    <CardTitle className="text-lg sm:text-xl lg:text-2xl font-bold text-white">
-                      Conversation
-                    </CardTitle>
+                    <CardTitle className="text-lg sm:text-xl lg:text-2xl font-bold text-white">Conversation</CardTitle>
                     <CardDescription className="text-orange-100 text-sm">
-                      <span className="hidden sm:inline">
-                        Auto-updating every second
-                      </span>
+                      <span className="hidden sm:inline">Auto-updating every second</span>
                       <span className="sm:hidden">Live updates</span>
                     </CardDescription>
                   </div>
@@ -428,15 +377,10 @@ export default function MessagesPage() {
                 {/* Live status indicator */}
                 <div className="flex items-center space-x-2">
                   <div
-                    className={`w-2 h-2 rounded-full ${
-                      autoRefreshEnabled
-                        ? "bg-green-400 animate-pulse"
-                        : "bg-red-400"
-                    }`}
+                    className={`w-2 h-2 rounded-full ${autoRefreshEnabled ? "bg-green-400 animate-pulse" : "bg-red-400"
+                      }`}
                   ></div>
-                  <span className="text-white text-xs sm:text-sm">
-                    {autoRefreshEnabled ? "Live" : "Paused"}
-                  </span>
+                  <span className="text-white text-xs sm:text-sm">{autoRefreshEnabled ? "Live" : "Paused"}</span>
                 </div>
               </div>
             </div>
@@ -461,53 +405,49 @@ export default function MessagesPage() {
                   messages.map((message) => (
                     <div
                       key={message.id}
-                      className={`flex space-x-2 sm:space-x-3 ${
-                        message.from_admin ? "flex-row" : "flex-row-reverse"
-                      }`}
+                      className={`flex space-x-2 sm:space-x-3 ${message.from_admin ? "flex-row" : "flex-row-reverse"}`}
                     >
                       <div
-                        className={`w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center shadow-lg ${
-                          message.from_admin
+                        className={`w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center shadow-lg flex-shrink-0 ${message.from_admin
                             ? "bg-gradient-to-br from-[#F26623] to-[#E55A1F]"
                             : "bg-gradient-to-br from-gray-500 to-gray-600"
-                        }`}
+                          }`}
                       >
                         {message.from_admin ? (
                           <Shield className="h-4 w-4 sm:h-5 sm:w-5 text-white" />
                         ) : (
-                          <User className="h-4 w-4 sm:h-5 sm:w-5 text-white" />
+                          <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center shadow-lg flex-shrink-0 bg-gradient-to-br from-gray-500 to-gray-600">
+                            <Shield className="h-4 w-4 sm:h-5 sm:w-5 text-white" />
+                          </div>
                         )}
                       </div>
                       <div
-                        className={`flex-1 max-w-[75%] sm:max-w-xs lg:max-w-md ${
-                          message.from_admin ? "text-left" : "text-right"
-                        }`}
+                        className={`flex-1 min-w-0 max-w-[75%] sm:max-w-xs lg:max-w-md ${message.from_admin ? "text-left" : "text-right"
+                          }`}
                       >
                         <div
-                          className={`p-3 sm:p-4 rounded-xl sm:rounded-2xl shadow-lg ${
-                            message.from_admin
+                          className={`p-3 sm:p-4 rounded-xl sm:rounded-2xl shadow-lg break-words overflow-wrap-anywhere ${message.from_admin
                               ? "bg-gradient-to-br from-[#F26623]/10 to-[#E55A1F]/20 border border-[#F26623]/20 text-gray-900"
                               : "bg-gradient-to-br from-gray-100 to-gray-200 border border-gray-200 text-gray-900"
-                          }`}
+                            }`}
+                          style={{
+                            wordBreak: "break-word",
+                            overflowWrap: "break-word",
+                            hyphens: "auto",
+                          }}
                         >
-                          <p className="text-sm leading-relaxed">
-                            {message.message}
-                          </p>
+                          <p className="text-sm leading-relaxed whitespace-pre-wrap">{message.message}</p>
                           {message.from_admin && (
                             <div className="flex items-center mt-2 text-xs text-[#F26623] font-semibold">
-                              <CheckCircle className="h-3 w-3 mr-1" />
+                              <CheckCircle className="h-3 w-3 mr-1 flex-shrink-0" />
                               Support Team
                             </div>
                           )}
                         </div>
                         <div className="flex items-center mt-1 sm:mt-2 text-xs text-gray-500">
-                          <Clock className="h-3 w-3 mr-1" />
-                          <span className="hidden sm:inline">
-                            {new Date(message.created_at).toLocaleString()}
-                          </span>
-                          <span className="sm:hidden">
-                            {new Date(message.created_at).toLocaleTimeString()}
-                          </span>
+                          <Clock className="h-3 w-3 mr-1 flex-shrink-0" />
+                          <span className="hidden sm:inline">{new Date(message.created_at).toLocaleString()}</span>
+                          <span className="sm:hidden">{new Date(message.created_at).toLocaleTimeString()}</span>
                         </div>
                       </div>
                     </div>
@@ -517,9 +457,7 @@ export default function MessagesPage() {
                     <div className="bg-gradient-to-br from-[#F26623]/10 to-[#E55A1F]/20 rounded-full w-16 h-16 sm:w-24 sm:h-24 flex items-center justify-center mx-auto mb-4 sm:mb-6">
                       <MessageSquare className="h-8 w-8 sm:h-12 sm:w-12 text-[#F26623]" />
                     </div>
-                    <h3 className="text-lg sm:text-xl font-bold text-gray-900 mb-2">
-                      No messages yet
-                    </h3>
+                    <h3 className="text-lg sm:text-xl font-bold text-gray-900 mb-2">No messages yet</h3>
                     <p className="text-gray-600 mb-4 sm:mb-6 text-sm sm:text-base">
                       Start a secure conversation with our support team
                     </p>
@@ -548,7 +486,11 @@ export default function MessagesPage() {
                     placeholder="Type your secure message here..."
                     rows={3}
                     required
-                    className="border-[#F26623]/30 focus:border-[#F26623] focus:ring-[#F26623]/20 rounded-lg sm:rounded-xl text-sm sm:text-base"
+                    className="border-[#F26623]/30 focus:border-[#F26623] focus:ring-[#F26623]/20 rounded-lg sm:rounded-xl text-sm sm:text-base resize-none"
+                    style={{
+                      wordBreak: "break-word",
+                      overflowWrap: "break-word",
+                    }}
                   />
                 </div>
                 <Button
@@ -571,13 +513,9 @@ export default function MessagesPage() {
                   <AlertCircle className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
                 </div>
                 <div>
-                  <CardTitle className="text-lg sm:text-xl font-bold text-white">
-                    Quick Actions
-                  </CardTitle>
+                  <CardTitle className="text-lg sm:text-xl font-bold text-white">Quick Actions</CardTitle>
                   <CardDescription className="text-orange-100 text-sm">
-                    <span className="hidden sm:inline">
-                      Common support topics
-                    </span>
+                    <span className="hidden sm:inline">Common support topics</span>
                     <span className="sm:hidden">Quick help</span>
                   </CardDescription>
                 </div>
@@ -587,83 +525,57 @@ export default function MessagesPage() {
             <CardContent className="p-4 sm:p-6 space-y-3 sm:space-y-4">
               <Button
                 variant="outline"
-                className="w-full justify-start text-left p-3 sm:p-4 h-auto border-[#F26623]/30 hover:bg-[#F26623]/10 hover:border-[#F26623] hover:text-[#F26623] transition-all duration-300"
-                onClick={() =>
-                  setNewMessage(
-                    "I need help with my account balance and recent transactions."
-                  )
-                }
+                className="w-full justify-start text-left p-3 sm:p-4 h-auto border-[#F26623]/30 hover:bg-[#F26623]/10 hover:border-[#F26623] hover:text-[#F26623] transition-all duration-300 bg-transparent"
+                onClick={() => setNewMessage("I need help with my account balance and recent transactions.")}
               >
                 <div className="flex items-center space-x-2 sm:space-x-3">
                   <div className="bg-[#F26623]/10 rounded-full p-1.5 sm:p-2">
-                    <User className="h-3 w-3 sm:h-4 sm:w-4 text-[#F26623]" />
+                    <Shield className="h-3 w-3 sm:h-4 sm:w-4 text-[#F26623]" />
                   </div>
                   <div>
-                    <div className="font-semibold text-sm sm:text-base">
-                      Account Balance Help
-                    </div>
-                    <div className="text-xs text-gray-500">
-                      Balance inquiries & transactions
-                    </div>
+                    <div className="font-semibold text-sm sm:text-base">Account Balance Help</div>
+                    <div className="text-xs text-gray-500">Balance inquiries & transactions</div>
                   </div>
                 </div>
               </Button>
 
               <Button
                 variant="outline"
-                className="w-full justify-start text-left p-3 sm:p-4 h-auto border-[#F26623]/30 hover:bg-[#F26623]/10 hover:border-[#F26623] hover:text-[#F26623] transition-all duration-300"
-                onClick={() =>
-                  setNewMessage(
-                    "I have a question about a specific transaction on my account."
-                  )
-                }
+                className="w-full justify-start text-left p-3 sm:p-4 h-auto border-[#F26623]/30 hover:bg-[#F26623]/10 hover:border-[#F26623] hover:text-[#F26623] transition-all duration-300 bg-transparent"
+                onClick={() => setNewMessage("I have a question about a specific transaction on my account.")}
               >
                 <div className="flex items-center space-x-2 sm:space-x-3">
                   <div className="bg-[#F26623]/10 rounded-full p-1.5 sm:p-2">
                     <MessageSquare className="h-3 w-3 sm:h-4 sm:w-4 text-[#F26623]" />
                   </div>
                   <div>
-                    <div className="font-semibold text-sm sm:text-base">
-                      Transaction Inquiry
-                    </div>
-                    <div className="text-xs text-gray-500">
-                      Questions about payments
-                    </div>
+                    <div className="font-semibold text-sm sm:text-base">Transaction Inquiry</div>
+                    <div className="text-xs text-gray-500">Questions about payments</div>
                   </div>
                 </div>
               </Button>
 
               <Button
                 variant="outline"
-                className="w-full justify-start text-left p-3 sm:p-4 h-auto border-[#F26623]/30 hover:bg-[#F26623]/10 hover:border-[#F26623] hover:text-[#F26623] transition-all duration-300"
-                onClick={() =>
-                  setNewMessage(
-                    "I need to update my account information and personal details."
-                  )
-                }
+                className="w-full justify-start text-left p-3 sm:p-4 h-auto border-[#F26623]/30 hover:bg-[#F26623]/10 hover:border-[#F26623] hover:text-[#F26623] transition-all duration-300 bg-transparent"
+                onClick={() => setNewMessage("I need to update my account information and personal details.")}
               >
                 <div className="flex items-center space-x-2 sm:space-x-3">
                   <div className="bg-[#F26623]/10 rounded-full p-1.5 sm:p-2">
-                    <User className="h-3 w-3 sm:h-4 sm:w-4 text-[#F26623]" />
+                    <Shield className="h-3 w-3 sm:h-4 sm:w-4 text-[#F26623]" />
                   </div>
                   <div>
-                    <div className="font-semibold text-sm sm:text-base">
-                      Account Update
-                    </div>
-                    <div className="text-xs text-gray-500">
-                      Personal information changes
-                    </div>
+                    <div className="font-semibold text-sm sm:text-base">Account Update</div>
+                    <div className="text-xs text-gray-500">Personal information changes</div>
                   </div>
                 </div>
               </Button>
 
               <Button
                 variant="outline"
-                className="w-full justify-start text-left p-3 sm:p-4 h-auto border-[#F26623]/30 hover:bg-[#F26623]/10 hover:border-[#F26623] hover:text-[#F26623] transition-all duration-300"
+                className="w-full justify-start text-left p-3 sm:p-4 h-auto border-[#F26623]/30 hover:bg-[#F26623]/10 hover:border-[#F26623] hover:text-[#F26623] transition-all duration-300 bg-transparent"
                 onClick={() =>
-                  setNewMessage(
-                    "I have a security concern about my account that needs immediate attention."
-                  )
+                  setNewMessage("I have a security concern about my account that needs immediate attention.")
                 }
               >
                 <div className="flex items-center space-x-2 sm:space-x-3">
@@ -671,12 +583,8 @@ export default function MessagesPage() {
                     <Shield className="h-3 w-3 sm:h-4 sm:w-4 text-red-600" />
                   </div>
                   <div>
-                    <div className="font-semibold text-red-600 text-sm sm:text-base">
-                      Security Issue
-                    </div>
-                    <div className="text-xs text-gray-500">
-                      Urgent security matters
-                    </div>
+                    <div className="font-semibold text-red-600 text-sm sm:text-base">Security Issue</div>
+                    <div className="text-xs text-gray-500">Urgent security matters</div>
                   </div>
                 </div>
               </Button>
@@ -685,5 +593,5 @@ export default function MessagesPage() {
         </div>
       </div>
     </DashboardLayout>
-  );
+  )
 }

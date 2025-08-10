@@ -1,38 +1,15 @@
-"use client";
+"use client"
 
-import { useEffect, useState } from "react";
-import { supabase } from "@/lib/supabase";
-import { getCurrentUser } from "@/lib/auth";
-import DashboardLayout from "@/components/dashboard-layout";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-import { Textarea } from "@/components/ui/textarea";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Separator } from "@/components/ui/separator";
-import { Badge } from "@/components/ui/badge";
+import type React from "react"
+
+import { useEffect, useState } from "react"
+import { supabase } from "@/lib/supabase"
+import { getCurrentUser } from "@/lib/auth"
+import DashboardLayout from "@/components/dashboard-layout"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
+import { Separator } from "@/components/ui/separator"
+import { Badge } from "@/components/ui/badge"
 import {
   FileText,
   Calendar,
@@ -45,78 +22,77 @@ import {
   Receipt,
   TrendingUp,
   Info,
-  Plus,
-  Calculator,
-  Shield,
-  FileCheck,
-  Banknote,
-  PieChart,
-} from "lucide-react";
-import { Database } from "@/lib/supabase";
-import { convertCurrency } from "@/lib/exchange-rates";
+} from "lucide-react"
+import type { Database } from "@/lib/supabase"
+import { convertCurrency } from "@/lib/exchange-rates"
 
-type User = Database["public"]["Tables"]["users"]["Row"];
-type Tax = Database["public"]["Tables"]["taxes"]["Row"];
-type Balance = Database["public"]["Tables"]["balances"]["Row"];
-type Transaction = Database["public"]["Tables"]["transactions"]["Row"];
+type User = Database["public"]["Tables"]["users"]["Row"]
+type Tax = Database["public"]["Tables"]["taxes"]["Row"]
+type Balance = Database["public"]["Tables"]["balances"]["Row"]
+type Transaction = Database["public"]["Tables"]["transactions"]["Row"]
 
 export default function TaxesPage() {
-  const [user, setUser] = useState<User | null>(null);
-  const [taxes, setTaxes] = useState<Tax[]>([]);
-  const [balances, setBalances] = useState<Balance[]>([]);
-  const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [filing, setFiling] = useState(false);
-  const [dialogOpen, setDialogOpen] = useState(false);
+  const [user, setUser] = useState<User | null>(null)
+  const [taxes, setTaxes] = useState<Tax[]>([])
+  const [balances, setBalances] = useState<Balance[]>([])
+  const [transactions, setTransactions] = useState<Transaction[]>([])
+  const [loading, setLoading] = useState(true)
+  const [filing, setFiling] = useState(false)
+  const [dialogOpen, setDialogOpen] = useState(false)
 
   // Tax filing form state
-  const [filingYear, setFilingYear] = useState(
-    new Date().getFullYear().toString()
-  );
-  const [employmentIncome, setEmploymentIncome] = useState("");
-  const [businessIncome, setBusinessIncome] = useState("");
-  const [investmentIncome, setInvestmentIncome] = useState("");
-  const [otherIncome, setOtherIncome] = useState("");
-  const [deductions, setDeductions] = useState("");
-  const [filingStatus, setFilingStatus] = useState("");
-  const [dependents, setDependents] = useState("");
-  const [taxComments, setTaxComments] = useState("");
-  const [agreeTerms, setAgreeTerms] = useState(false);
+  const [filingYear, setFilingYear] = useState(new Date().getFullYear().toString())
+  const [employmentIncome, setEmploymentIncome] = useState("")
+  const [businessIncome, setBusinessIncome] = useState("")
+  const [investmentIncome, setInvestmentIncome] = useState("")
+  const [otherIncome, setOtherIncome] = useState("")
+  const [deductions, setDeductions] = useState("")
+  const [filingStatus, setFilingStatus] = useState("")
+  const [dependents, setDependents] = useState("")
+  const [taxComments, setTaxComments] = useState("")
+  const [agreeTerms, setAgreeTerms] = useState(false)
+
+  // Function to refresh data
+  const refreshData = async (currentUser: User) => {
+    try {
+      // Load tax records
+      const { data: taxesData } = await supabase
+        .from("taxes")
+        .select("*")
+        .eq("user_id", currentUser.id)
+        .order("year", { ascending: false })
+
+      setTaxes(taxesData || [])
+
+      // Load user balances for tax calculation context
+      const { data: balancesData } = await supabase.from("balances").select("*").eq("user_id", currentUser.id)
+
+      setBalances(balancesData || [])
+
+      // Load transactions for tax year
+      const { data: transactionsData } = await supabase
+        .from("transactions")
+        .select("*")
+        .eq("user_id", currentUser.id)
+        .gte("created_at", `${new Date().getFullYear()}-01-01`)
+        .lte("created_at", `${new Date().getFullYear()}-12-31`)
+
+      setTransactions(transactionsData || [])
+    } catch (error) {
+      console.error("Error refreshing data:", error)
+    }
+  }
 
   useEffect(() => {
     const loadData = async () => {
       try {
-        const currentUser = await getCurrentUser();
-        if (!currentUser) return;
+        const currentUser = await getCurrentUser()
+        if (!currentUser) return
 
-        setUser(currentUser);
+        setUser(currentUser)
 
-        // Load tax records
-        const { data: taxesData } = await supabase
-          .from("taxes")
-          .select("*")
-          .eq("user_id", currentUser.id)
-          .order("year", { ascending: false });
-
-        setTaxes(taxesData || []);
-
-        // Load user balances for tax calculation context
-        const { data: balancesData } = await supabase
-          .from("balances")
-          .select("*")
-          .eq("user_id", currentUser.id);
-
-        setBalances(balancesData || []);
-
-        // Load transactions for tax year
-        const { data: transactionsData } = await supabase
-          .from("transactions")
-          .select("*")
-          .eq("user_id", currentUser.id)
-          .gte("created_at", `${new Date().getFullYear()}-01-01`)
-          .lte("created_at", `${new Date().getFullYear()}-12-31`);
-
-        setTransactions(transactionsData || []);
+        // Initial data load
+        await refreshData(currentUser)
 
         // Set up real-time subscription
         const channel = supabase
@@ -136,135 +112,129 @@ export default function TaxesPage() {
                 .select("*")
                 .eq("user_id", currentUser.id)
                 .order("year", { ascending: false })
-                .then(({ data }) => setTaxes(data || []));
-            }
+                .then(({ data }) => setTaxes(data || []))
+            },
           )
-          .subscribe();
+          .subscribe()
+
+        // Set up polling to refresh data every second
+        const intervalId = setInterval(() => {
+          refreshData(currentUser)
+        }, 1000)
 
         return () => {
-          supabase.removeChannel(channel);
-        };
+          supabase.removeChannel(channel)
+          clearInterval(intervalId)
+        }
       } catch (error) {
-        console.error("Error loading tax data:", error);
+        console.error("Error loading tax data:", error)
       } finally {
-        setLoading(false);
+        setLoading(false)
       }
-    };
+    }
 
-    loadData();
-  }, []);
+    loadData()
+  }, [])
 
   const handleTaxFiling = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!user || !agreeTerms) return;
+    e.preventDefault()
+    if (!user || !agreeTerms) return
 
-    setFiling(true);
+    setFiling(true)
 
     try {
       // Calculate total income
       const totalIncome =
-        (parseFloat(employmentIncome) || 0) +
-        (parseFloat(businessIncome) || 0) +
-        (parseFloat(investmentIncome) || 0) +
-        (parseFloat(otherIncome) || 0);
+        (Number.parseFloat(employmentIncome) || 0) +
+        (Number.parseFloat(businessIncome) || 0) +
+        (Number.parseFloat(investmentIncome) || 0) +
+        (Number.parseFloat(otherIncome) || 0)
 
       // Calculate taxable income (after deductions)
-      const taxableIncome = Math.max(
-        0,
-        totalIncome - (parseFloat(deductions) || 0)
-      );
+      const taxableIncome = Math.max(0, totalIncome - (Number.parseFloat(deductions) || 0))
 
       // Calculate tax amount (15% rate as example)
-      const taxAmount = taxableIncome * 0.15;
+      const taxAmount = taxableIncome * 0.15
 
       // Create tax filing request
       const { error } = await supabase.from("taxes").insert({
         user_id: user.id,
-        year: parseInt(filingYear),
+        year: Number.parseInt(filingYear),
         amount: taxAmount,
         status: "pending",
-      });
+      })
 
-      if (error) throw error;
+      if (error) throw error
 
       // Log activity
       await supabase.from("activity_logs").insert({
         user_id: user.id,
-        activity: `Filed tax return for ${filingYear}: $${taxAmount.toFixed(
-          2
-        )} (Pending Review)`,
-      });
+        activity: `Filed tax return for ${filingYear}: $${taxAmount.toFixed(2)} (Pending Review)`,
+      })
 
       // Reset form
-      setEmploymentIncome("");
-      setBusinessIncome("");
-      setInvestmentIncome("");
-      setOtherIncome("");
-      setDeductions("");
-      setFilingStatus("");
-      setDependents("");
-      setTaxComments("");
-      setAgreeTerms(false);
-      setDialogOpen(false);
+      setEmploymentIncome("")
+      setBusinessIncome("")
+      setInvestmentIncome("")
+      setOtherIncome("")
+      setDeductions("")
+      setFilingStatus("")
+      setDependents("")
+      setTaxComments("")
+      setAgreeTerms(false)
+      setDialogOpen(false)
     } catch (error) {
-      console.error("Error filing tax return:", error);
-      alert("Tax filing failed. Please try again or contact support.");
+      console.error("Error filing tax return:", error)
+      alert("Tax filing failed. Please try again or contact support.")
     } finally {
-      setFiling(false);
+      setFiling(false)
     }
-  };
+  }
 
   const getStatusIcon = (status: string) => {
     switch (status) {
       case "pending":
-        return <Clock className="h-4 w-4 text-amber-600" />;
+        return <Clock className="h-4 w-4 text-amber-600" />
       case "filed":
-        return <CheckCircle className="h-4 w-4 text-green-600" />;
+        return <CheckCircle className="h-4 w-4 text-green-600" />
       case "paid":
-        return <CheckCircle className="h-4 w-4 text-[#F26623]" />;
+        return <CheckCircle className="h-4 w-4 text-[#F26623]" />
       case "overdue":
-        return <AlertTriangle className="h-4 w-4 text-red-600" />;
+        return <AlertTriangle className="h-4 w-4 text-red-600" />
       default:
-        return <FileText className="h-4 w-4 text-gray-600" />;
+        return <FileText className="h-4 w-4 text-gray-600" />
     }
-  };
+  }
 
   const getStatusColor = (status: string) => {
     switch (status) {
       case "pending":
-        return "bg-amber-50 text-amber-700 border-amber-200";
+        return "bg-amber-50 text-amber-700 border-amber-200"
       case "filed":
-        return "bg-green-50 text-green-700 border-green-200";
+        return "bg-green-50 text-green-700 border-green-200"
       case "paid":
-        return "bg-orange-50 text-[#F26623] border-orange-200";
+        return "bg-orange-50 text-[#F26623] border-orange-200"
       case "overdue":
-        return "bg-red-50 text-red-700 border-red-200";
+        return "bg-red-50 text-red-700 border-red-200"
       default:
-        return "bg-gray-50 text-gray-700 border-gray-200";
+        return "bg-gray-50 text-gray-700 border-gray-200"
     }
-  };
+  }
 
-  const currentYear = new Date().getFullYear();
-  const currentYearTax = taxes.find((t) => t.year === currentYear);
-  const totalTaxes = taxes.reduce((sum, tax) => sum + Number(tax.amount), 0);
-  const pendingTaxes = taxes.filter((t) => t.status === "pending").length;
-  const completedTaxes = taxes.filter(
-    (t) => t.status === "filed" || t.status === "paid"
-  ).length;
+  const currentYear = new Date().getFullYear()
+  const currentYearTax = taxes.find((t) => t.year === currentYear)
+  const totalTaxes = taxes.reduce((sum, tax) => sum + Number(tax.amount), 0)
+  const pendingTaxes = taxes.filter((t) => t.status === "pending").length
+  const completedTaxes = taxes.filter((t) => t.status === "filed" || t.status === "paid").length
 
   // Calculate account summary for tax context
   const totalAccountValue = balances.reduce((sum, balance) => {
-    return (
-      sum + convertCurrency(Number(balance.amount), balance.currency, "USD")
-    );
-  }, 0);
+    return sum + convertCurrency(Number(balance.amount), balance.currency, "USD")
+  }, 0)
 
   const yearlyTransactionVolume = transactions.reduce((sum, transaction) => {
-    return (
-      sum +
-      convertCurrency(Number(transaction.amount), transaction.currency, "USD")
-    );
-  }, 0);
+    return sum + convertCurrency(Number(transaction.amount), transaction.currency, "USD")
+  }, 0)
 
   return (
     <DashboardLayout currentSection="taxes">
@@ -272,12 +242,8 @@ export default function TaxesPage() {
         {/* Header */}
         <div className="flex items-center justify-between">
           <div className="space-y-1">
-            <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-gray-900">
-              Tax Center
-            </h1>
-            <p className="text-base md:text-lg text-gray-600">
-              Comprehensive tax management and reporting
-            </p>
+            <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-gray-900">Tax Center</h1>
+            <p className="text-base md:text-lg text-gray-600">Comprehensive tax management and reporting</p>
           </div>
           <div className="flex items-center space-x-2 text-xs md:text-sm text-gray-500">
             <Building2 className="h-4 w-4" />
@@ -289,9 +255,7 @@ export default function TaxesPage() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           <Card className="border-l-4 border-l-[#F26623] shadow-sm hover:shadow-md transition-shadow">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
-              <CardTitle className="text-xs md:text-sm font-medium text-gray-600">
-                Current Year
-              </CardTitle>
+              <CardTitle className="text-xs md:text-sm font-medium text-gray-600">Current Year</CardTitle>
               <div className="h-8 w-8 bg-orange-100 rounded-full flex items-center justify-center">
                 <Calendar className="h-4 w-4 text-[#F26623]" />
               </div>
@@ -301,21 +265,15 @@ export default function TaxesPage() {
                 $
                 {currentYearTax
                   ? Number(currentYearTax.amount).toLocaleString("en-US", {
-                      minimumFractionDigits: 2,
-                    })
+                    minimumFractionDigits: 2,
+                  })
                   : "0.00"}
               </div>
-              <p className="text-xs text-gray-500 mt-1">
-                Tax Year {currentYear}
-              </p>
+              <p className="text-xs text-gray-500 mt-1">Tax Year {currentYear}</p>
               {currentYearTax && (
-                <Badge
-                  className={`mt-2 ${getStatusColor(currentYearTax.status)}`}
-                >
+                <Badge className={`mt-2 ${getStatusColor(currentYearTax.status)}`}>
                   {getStatusIcon(currentYearTax.status)}
-                  <span className="ml-1 capitalize text-xs">
-                    {currentYearTax.status}
-                  </span>
+                  <span className="ml-1 capitalize text-xs">{currentYearTax.status}</span>
                 </Badge>
               )}
             </CardContent>
@@ -323,9 +281,7 @@ export default function TaxesPage() {
 
           <Card className="border-l-4 border-l-green-500 shadow-sm hover:shadow-md transition-shadow">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
-              <CardTitle className="text-xs md:text-sm font-medium text-gray-600">
-                Total Tax History
-              </CardTitle>
+              <CardTitle className="text-xs md:text-sm font-medium text-gray-600">Total Tax History</CardTitle>
               <div className="h-8 w-8 bg-green-100 rounded-full flex items-center justify-center">
                 <DollarSign className="h-4 w-4 text-green-600" />
               </div>
@@ -343,34 +299,26 @@ export default function TaxesPage() {
 
           <Card className="border-l-4 border-l-amber-500 shadow-sm hover:shadow-md transition-shadow">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
-              <CardTitle className="text-xs md:text-sm font-medium text-gray-600">
-                Pending Items
-              </CardTitle>
+              <CardTitle className="text-xs md:text-sm font-medium text-gray-600">Pending Items</CardTitle>
               <div className="h-8 w-8 bg-amber-100 rounded-full flex items-center justify-center">
                 <Clock className="h-4 w-4 text-amber-600" />
               </div>
             </CardHeader>
             <CardContent>
-              <div className="text-xl md:text-2xl font-bold text-gray-900">
-                {pendingTaxes}
-              </div>
+              <div className="text-xl md:text-2xl font-bold text-gray-900">{pendingTaxes}</div>
               <p className="text-xs text-gray-500 mt-1">Require attention</p>
             </CardContent>
           </Card>
 
           <Card className="border-l-4 border-l-[#F26623] shadow-sm hover:shadow-md transition-shadow">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
-              <CardTitle className="text-xs md:text-sm font-medium text-gray-600">
-                Completed
-              </CardTitle>
+              <CardTitle className="text-xs md:text-sm font-medium text-gray-600">Completed</CardTitle>
               <div className="h-8 w-8 bg-orange-100 rounded-full flex items-center justify-center">
                 <TrendingUp className="h-4 w-4 text-[#F26623]" />
               </div>
             </CardHeader>
             <CardContent>
-              <div className="text-xl md:text-2xl font-bold text-gray-900">
-                {completedTaxes}
-              </div>
+              <div className="text-xl md:text-2xl font-bold text-gray-900">{completedTaxes}</div>
               <p className="text-xs text-gray-500 mt-1">Filed or paid</p>
             </CardContent>
           </Card>
@@ -381,9 +329,7 @@ export default function TaxesPage() {
           <CardHeader className="bg-gradient-to-r from-orange-50 to-orange-100 rounded-t-lg border-b border-orange-200">
             <div className="flex items-center justify-between">
               <div>
-                <CardTitle className="text-lg md:text-xl font-semibold text-gray-900">
-                  Tax Records
-                </CardTitle>
+                <CardTitle className="text-lg md:text-xl font-semibold text-gray-900">Tax Records</CardTitle>
                 <CardDescription className="text-gray-600 mt-1 text-sm md:text-base">
                   Annual tax statements and documentation
                 </CardDescription>
@@ -414,35 +360,24 @@ export default function TaxesPage() {
             ) : taxes.length > 0 ? (
               <div className="divide-y divide-gray-100">
                 {taxes.map((tax, index) => (
-                  <div
-                    key={tax.id}
-                    className="p-4 md:p-6 hover:bg-gray-50 transition-colors duration-150"
-                  >
+                  <div key={tax.id} className="p-4 md:p-6 hover:bg-gray-50 transition-colors duration-150">
                     <div className="flex flex-col md:flex-row md:items-center justify-between space-y-4 md:space-y-0">
                       <div className="flex items-center space-x-3 md:space-x-4">
                         <div className="h-10 w-10 md:h-12 md:w-12 bg-gradient-to-br from-[#F26623] to-orange-600 rounded-lg flex items-center justify-center">
                           <FileText className="h-5 w-5 md:h-6 md:w-6 text-white" />
                         </div>
                         <div>
-                          <h3 className="text-base md:text-lg font-semibold text-gray-900">
-                            Tax Year {tax.year}
-                          </h3>
+                          <h3 className="text-base md:text-lg font-semibold text-gray-900">Tax Year {tax.year}</h3>
                           <div className="flex flex-col md:flex-row md:items-center md:space-x-4 mt-1 space-y-1 md:space-y-0">
                             <p className="text-xs md:text-sm text-gray-500">
                               Filed:{" "}
-                              {new Date(tax.created_at).toLocaleDateString(
-                                "en-US",
-                                {
-                                  year: "numeric",
-                                  month: "long",
-                                  day: "numeric",
-                                }
-                              )}
+                              {new Date(tax.created_at).toLocaleDateString("en-US", {
+                                year: "numeric",
+                                month: "long",
+                                day: "numeric",
+                              })}
                             </p>
-                            <Separator
-                              orientation="vertical"
-                              className="h-4 hidden md:block"
-                            />
+                            <Separator orientation="vertical" className="h-4 hidden md:block" />
                             <p className="text-xs md:text-sm text-gray-500">
                               ID: #{tax.id.substring(0, 8).toUpperCase()}
                             </p>
@@ -458,27 +393,19 @@ export default function TaxesPage() {
                               minimumFractionDigits: 2,
                             })}
                           </p>
-                          <p className="text-xs md:text-sm text-gray-500">
-                            Tax Amount
-                          </p>
+                          <p className="text-xs md:text-sm text-gray-500">Tax Amount</p>
                         </div>
 
                         <div className="flex flex-col md:flex-row items-start md:items-center space-y-2 md:space-y-0 md:space-x-3">
-                          <Badge
-                            className={`${getStatusColor(
-                              tax.status
-                            )} border text-xs`}
-                          >
+                          <Badge className={`${getStatusColor(tax.status)} border text-xs`}>
                             {getStatusIcon(tax.status)}
-                            <span className="ml-1 capitalize font-medium">
-                              {tax.status.replace("_", " ")}
-                            </span>
+                            <span className="ml-1 capitalize font-medium">{tax.status.replace("_", " ")}</span>
                           </Badge>
 
                           <Button
                             variant="outline"
                             size="sm"
-                            className="hover:bg-orange-50 hover:border-[#F26623] hover:text-[#F26623] text-xs md:text-sm"
+                            className="hover:bg-orange-50 hover:border-[#F26623] hover:text-[#F26623] text-xs md:text-sm bg-transparent"
                           >
                             <Download className="h-3 w-3 md:h-4 md:w-4 mr-2" />
                             Download
@@ -494,13 +421,10 @@ export default function TaxesPage() {
                 <div className="h-12 w-12 md:h-16 md:w-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
                   <FileText className="h-6 w-6 md:h-8 md:w-8 text-gray-400" />
                 </div>
-                <h3 className="text-base md:text-lg font-medium text-gray-900 mb-2">
-                  No Tax Records Available
-                </h3>
+                <h3 className="text-base md:text-lg font-medium text-gray-900 mb-2">No Tax Records Available</h3>
                 <p className="text-sm md:text-base text-gray-500 max-w-md mx-auto">
-                  Tax records are created and managed by our tax administration
-                  team. You will be notified when new tax documents are
-                  available.
+                  Tax records are created and managed by our tax administration team. You will be notified when new tax
+                  documents are available.
                 </p>
               </div>
             )}
@@ -513,35 +437,21 @@ export default function TaxesPage() {
             <CardHeader>
               <div className="flex items-center space-x-2">
                 <Info className="h-4 md:h-5 w-4 md:w-5 text-[#F26623]" />
-                <CardTitle className="text-[#F26623] text-base md:text-lg">
-                  Tax Calculation Method
-                </CardTitle>
+                <CardTitle className="text-[#F26623] text-base md:text-lg">Tax Calculation Method</CardTitle>
               </div>
             </CardHeader>
             <CardContent className="space-y-3">
               <div className="flex justify-between items-center py-2 border-b border-orange-200">
-                <span className="text-xs md:text-sm font-medium text-orange-800">
-                  Tax Rate
-                </span>
-                <span className="text-xs md:text-sm text-orange-700">
-                  15% on transaction volume
-                </span>
+                <span className="text-xs md:text-sm font-medium text-orange-800">Tax Rate</span>
+                <span className="text-xs md:text-sm text-orange-700">15% on transaction volume</span>
               </div>
               <div className="flex justify-between items-center py-2 border-b border-orange-200">
-                <span className="text-xs md:text-sm font-medium text-orange-800">
-                  Filing Deadline
-                </span>
-                <span className="text-xs md:text-sm text-orange-700">
-                  April 15th annually
-                </span>
+                <span className="text-xs md:text-sm font-medium text-orange-800">Filing Deadline</span>
+                <span className="text-xs md:text-sm text-orange-700">April 15th annually</span>
               </div>
               <div className="flex justify-between items-center py-2">
-                <span className="text-xs md:text-sm font-medium text-orange-800">
-                  Processing Time
-                </span>
-                <span className="text-xs md:text-sm text-orange-700">
-                  2-3 business days
-                </span>
+                <span className="text-xs md:text-sm font-medium text-orange-800">Processing Time</span>
+                <span className="text-xs md:text-sm text-orange-700">2-3 business days</span>
               </div>
             </CardContent>
           </Card>
@@ -550,23 +460,19 @@ export default function TaxesPage() {
             <CardHeader>
               <div className="flex items-center space-x-2">
                 <AlertTriangle className="h-4 md:h-5 w-4 md:w-5 text-amber-600" />
-                <CardTitle className="text-amber-900 text-base md:text-lg">
-                  Important Notice
-                </CardTitle>
+                <CardTitle className="text-amber-900 text-base md:text-lg">Important Notice</CardTitle>
               </div>
             </CardHeader>
             <CardContent>
               <p className="text-xs md:text-sm text-amber-800 leading-relaxed">
-                Tax records displayed here are for informational purposes and
-                are managed by Anchor Group Investments tax administration team. For
-                personalized tax advice and filing requirements, please consult
-                with a qualified tax professional or contact our tax support
-                team.
+                Tax records displayed here are for informational purposes and are managed by Anchor Group Investments
+                tax administration team. For personalized tax advice and filing requirements, please consult with a
+                qualified tax professional or contact our tax support team.
               </p>
               <Button
                 variant="outline"
                 size="sm"
-                className="mt-4 border-amber-300 text-amber-700 hover:bg-amber-100 text-xs md:text-sm"
+                className="mt-4 border-amber-300 text-amber-700 hover:bg-amber-100 text-xs md:text-sm bg-transparent"
               >
                 Contact Tax Support
               </Button>
@@ -575,5 +481,5 @@ export default function TaxesPage() {
         </div>
       </div>
     </DashboardLayout>
-  );
+  )
 }

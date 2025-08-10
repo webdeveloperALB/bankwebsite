@@ -13,6 +13,7 @@ import KYCTab from "./components/kyc-tab";
 import CryptoTab from "./components/crypto-tab";
 import TransactionsTab from "./components/transactions-tab";
 import SupportTab from "./components/support-tab";
+import DepositsTab from "./components/deposits-tab"
 
 type User = Database["public"]["Tables"]["users"]["Row"];
 
@@ -61,6 +62,8 @@ export default function AdminPage() {
         return <CryptoTab />;
       case "transactions":
         return <TransactionsTab />;
+      case "deposits":
+        return <DepositsTab />
       case "messages":
         return <MessagesTab activeTab={activeTab} onTabChange={setActiveTab} />;
       case "taxes":

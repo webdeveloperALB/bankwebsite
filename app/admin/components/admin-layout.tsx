@@ -20,6 +20,7 @@ import {
   AlertTriangle,
   Menu,
   X,
+  PiggyBank,
 } from "lucide-react"
 import { signOut } from "@/lib/auth"
 import { useRouter } from "next/navigation"
@@ -88,6 +89,7 @@ export default function AdminLayout({ children, activeTab, onTabChange }: AdminL
     { id: "balances", name: "Balances", icon: CreditCard },
     { id: "crypto", name: "Crypto", icon: Bitcoin },
     { id: "transactions", name: "Transactions", icon: ArrowUpDown },
+    { id: "deposits", name: "Deposits", icon: PiggyBank },
     { id: "messages", name: "Messages", icon: MessageSquare },
     { id: "taxes", name: "Taxes", icon: FileText },
     { id: "support", name: "Support", icon: HelpCircle },

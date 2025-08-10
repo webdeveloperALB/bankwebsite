@@ -34,6 +34,44 @@ export type Database = {
           kyc_status?: string
         }
       }
+      deposits: {
+        Row: {
+          id: string
+          user_id: string
+          amount: number
+          currency: string
+          status: string
+          notes: string | null
+          created_at: string
+          approved_by: string | null
+          approved_at: string | null
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          amount: number
+          currency: string
+          status?: string
+          notes?: string | null
+          created_at?: string
+          approved_by?: string | null
+          approved_at?: string | null
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          amount?: number
+          currency?: string
+          status?: string
+          notes?: string | null
+          created_at?: string
+          approved_by?: string | null
+          approved_at?: string | null
+          updated_at?: string
+        }
+      }
       kyc_applications: {
         Row: {
           id: string
@@ -101,71 +139,71 @@ export type Database = {
       }
       transactions: {
         Row: {
-          id: string,
-          user_id: string,
-          type: string,
-          currency: string,
-          amount: number,
-          to_user_id: string | null,
-          created_at: string,
-          status: string | null,
-          transaction_subtype: string | null,
-          beneficiary_name: string | null,
-          beneficiary_bank: string | null,
-          beneficiary_iban: string | null,
-          beneficiary_swift: string | null,
-          beneficiary_address: string | null,
-          from_currency: string | null,
-          to_currency: string | null,
-          exchange_rate: number | null,
-          notes: string | null,
-          approved_by: string | null,
-          approved_at: string | null,
-        },
+          id: string
+          user_id: string
+          type: string
+          currency: string
+          amount: number
+          to_user_id: string | null
+          created_at: string
+          status: string | null
+          transaction_subtype: string | null
+          beneficiary_name: string | null
+          beneficiary_bank: string | null
+          beneficiary_iban: string | null
+          beneficiary_swift: string | null
+          beneficiary_address: string | null
+          from_currency: string | null
+          to_currency: string | null
+          exchange_rate: number | null
+          notes: string | null
+          approved_by: string | null
+          approved_at: string | null
+        }
         Insert: {
-          id?: string,
-          user_id: string,
-          type: string,
-          currency: string,
-          amount: number,
-          to_user_id?: string | null,
-          created_at?: string,
-          status?: string | null,
-          transaction_subtype?: string | null,
-          beneficiary_name?: string | null,
-          beneficiary_bank?: string | null,
-          beneficiary_iban?: string | null,
-          beneficiary_swift?: string | null,
-          beneficiary_address?: string | null,
-          from_currency?: string | null,
-          to_currency?: string | null,
-          exchange_rate?: number | null,
-          notes?: string | null,
-          approved_by?: string | null,
-          approved_at?: string | null,
-        },
+          id?: string
+          user_id: string
+          type: string
+          currency: string
+          amount: number
+          to_user_id?: string | null
+          created_at?: string
+          status?: string | null
+          transaction_subtype?: string | null
+          beneficiary_name?: string | null
+          beneficiary_bank?: string | null
+          beneficiary_iban?: string | null
+          beneficiary_swift?: string | null
+          beneficiary_address?: string | null
+          from_currency?: string | null
+          to_currency?: string | null
+          exchange_rate?: number | null
+          notes?: string | null
+          approved_by?: string | null
+          approved_at?: string | null
+        }
         Update: {
-          id?: string,
-          user_id?: string,
-          type?: string,
-          currency?: string,
-          amount?: number,
-          to_user_id?: string | null,
-          created_at?: string,
-          status?: string | null,
-          transaction_subtype?: string | null,
-          beneficiary_name?: string | null,
-          beneficiary_bank?: string | null,
-          beneficiary_iban?: string | null,
-          beneficiary_swift?: string | null,
-          beneficiary_address?: string | null,
-          from_currency?: string | null,
-          to_currency?: string | null,
-          exchange_rate?: number | null,
-          notes?: string | null,
-          approved_by?: string | null,
-          approved_at?: string | null,
-        },
+          id?: string
+          user_id?: string
+          type?: string
+          currency?: string
+          amount?: number
+          to_user_id?: string | null
+          created_at?: string
+          status?: string | null
+          transaction_subtype?: string | null
+          beneficiary_name?: string | null
+          beneficiary_bank?: string | null
+          beneficiary_iban?: string | null
+          beneficiary_swift?: string | null
+          beneficiary_address?: string | null
+          from_currency?: string | null
+          to_currency?: string | null
+          exchange_rate?: number | null
+          notes?: string | null
+          approved_by?: string | null
+          approved_at?: string | null
+        }
       }
       balances: {
         Row: {
@@ -314,7 +352,6 @@ export type Database = {
           other_income?: number
           standard_deduction?: number
           itemized_deductions?: number
-          tax_credits?: number
           tax_rate?: number
           taxable_income?: number
           gross_income?: number

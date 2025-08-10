@@ -1,6 +1,7 @@
 "use client"
 
 import type React from "react"
+import { User } from "lucide-react" // Import User component
 
 import { useState, useEffect, useRef } from "react"
 import { supabase } from "@/lib/supabase"
@@ -12,7 +13,6 @@ import { Textarea } from "@/components/ui/textarea"
 import {
   MessageSquare,
   Send,
-  User,
   Shield,
   Search,
   Clock,
@@ -24,7 +24,7 @@ import {
 } from "lucide-react"
 import type { Database } from "@/lib/supabase"
 
-type User = Database["public"]["Tables"]["users"]["Row"]
+type UserType = Database["public"]["Tables"]["users"]["Row"]
 type Message = Database["public"]["Tables"]["messages"]["Row"] & {
   users?: { name: string; email: string }
 }
@@ -36,9 +36,9 @@ interface AdminMessagesPageProps {
 
 export default function AdminMessagesPage({ activeTab, onTabChange }: AdminMessagesPageProps) {
   const [messages, setMessages] = useState<Message[]>([])
-  const [users, setUsers] = useState<User[]>([])
-  const [filteredUsers, setFilteredUsers] = useState<User[]>([])
-  const [selectedUser, setSelectedUser] = useState<User | null>(null)
+  const [users, setUsers] = useState<UserType[]>([])
+  const [filteredUsers, setFilteredUsers] = useState<UserType[]>([])
+  const [selectedUser, setSelectedUser] = useState<UserType | null>(null)
   const [userMessages, setUserMessages] = useState<Message[]>([])
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
@@ -135,7 +135,7 @@ export default function AdminMessagesPage({ activeTab, onTabChange }: AdminMessa
   }
 
   // Mobile chat handlers
-  const handleUserSelect = (user: User) => {
+  const handleUserSelect = (user: UserType) => {
     setSelectedUser(user)
     setShowMobileChat(true)
   }
@@ -319,7 +319,7 @@ export default function AdminMessagesPage({ activeTab, onTabChange }: AdminMessa
         <div className="absolute bottom-0 left-0 w-24 sm:w-36 md:w-48 h-24 sm:h-36 md:h-48 bg-white/5 rounded-full translate-y-12 sm:translate-y-18 md:translate-y-24 -translate-x-12 sm:-translate-x-18 md:-translate-x-24"></div>
 
         <div className="relative z-10">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 lg:gap-6 mb-4 sm:mb-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 lg:gap-6 mb-4 sm:mb-6 lg:mb-8">
             <div className="flex items-center space-x-2 sm:space-x-3 lg:space-x-4">
               <div className="bg-white/20 backdrop-blur-sm rounded-full p-2 sm:p-2.5 lg:p-3">
                 <MessageSquare className="h-5 w-5 sm:h-6 sm:w-6 lg:h-8 lg:w-8 text-white" />
@@ -614,7 +614,7 @@ export default function AdminMessagesPage({ activeTab, onTabChange }: AdminMessa
                         className={`flex space-x-2 ${message.from_admin ? "flex-row-reverse" : "flex-row"}`}
                       >
                         <div
-                          className={`w-8 h-8 rounded-full flex items-center justify-center shadow-lg ${message.from_admin
+                          className={`w-8 h-8 rounded-full flex items-center justify-center shadow-lg flex-shrink-0 ${message.from_admin
                               ? "bg-gradient-to-br from-[#F26623] to-[#E55A1F]"
                               : "bg-gradient-to-br from-gray-500 to-gray-600"
                             }`}
@@ -625,23 +625,30 @@ export default function AdminMessagesPage({ activeTab, onTabChange }: AdminMessa
                             <User className="h-4 w-4 text-white" />
                           )}
                         </div>
-                        <div className={`flex-1 max-w-[75%] ${message.from_admin ? "text-right" : "text-left"}`}>
+                        <div
+                          className={`flex-1 min-w-0 max-w-[75%] ${message.from_admin ? "text-right" : "text-left"}`}
+                        >
                           <div
-                            className={`p-3 rounded-xl shadow-lg ${message.from_admin
+                            className={`p-3 rounded-xl shadow-lg break-words overflow-wrap-anywhere ${message.from_admin
                                 ? "bg-gradient-to-br from-[#F26623]/10 to-[#E55A1F]/20 border border-[#F26623]/20 text-gray-900"
                                 : "bg-gradient-to-br from-gray-100 to-gray-200 border border-gray-200 text-gray-900"
                               }`}
+                            style={{
+                              wordBreak: "break-word",
+                              overflowWrap: "break-word",
+                              hyphens: "auto",
+                            }}
                           >
-                            <p className="text-sm leading-relaxed">{message.message}</p>
+                            <p className="text-sm leading-relaxed whitespace-pre-wrap">{message.message}</p>
                             {message.from_admin && (
                               <div className="flex items-center mt-2 text-xs text-[#F26623] font-semibold">
-                                <CheckCircle className="h-3 w-3 mr-1" />
+                                <CheckCircle className="h-3 w-3 mr-1 flex-shrink-0" />
                                 Support Team
                               </div>
                             )}
                           </div>
                           <div className="flex items-center mt-1 text-xs text-gray-500">
-                            <Clock className="h-3 w-3 mr-1" />
+                            <Clock className="h-3 w-3 mr-1 flex-shrink-0" />
                             {new Date(message.created_at).toLocaleTimeString()}
                           </div>
                         </div>
@@ -670,7 +677,11 @@ export default function AdminMessagesPage({ activeTab, onTabChange }: AdminMessa
                       placeholder="Type your response..."
                       rows={3}
                       required
-                      className="border-[#F26623]/30 focus:border-[#F26623] focus:ring-[#F26623]/20 rounded-lg text-sm"
+                      className="border-[#F26623]/30 focus:border-[#F26623] focus:ring-[#F26623]/20 rounded-lg text-sm resize-none"
+                      style={{
+                        wordBreak: "break-word",
+                        overflowWrap: "break-word",
+                      }}
                     />
                   </div>
                   <Button
@@ -834,7 +845,7 @@ export default function AdminMessagesPage({ activeTab, onTabChange }: AdminMessa
                           className={`flex space-x-3 ${message.from_admin ? "flex-row-reverse" : "flex-row"}`}
                         >
                           <div
-                            className={`w-10 h-10 rounded-full flex items-center justify-center shadow-lg ${message.from_admin
+                            className={`w-10 h-10 rounded-full flex items-center justify-center shadow-lg flex-shrink-0 ${message.from_admin
                                 ? "bg-gradient-to-br from-[#F26623] to-[#E55A1F]"
                                 : "bg-gradient-to-br from-gray-500 to-gray-600"
                               }`}
@@ -846,24 +857,29 @@ export default function AdminMessagesPage({ activeTab, onTabChange }: AdminMessa
                             )}
                           </div>
                           <div
-                            className={`flex-1 max-w-xs lg:max-w-md ${message.from_admin ? "text-right" : "text-left"}`}
+                            className={`flex-1 min-w-0 max-w-xs lg:max-w-md ${message.from_admin ? "text-right" : "text-left"}`}
                           >
                             <div
-                              className={`p-4 rounded-2xl shadow-lg ${message.from_admin
+                              className={`p-4 rounded-2xl shadow-lg break-words overflow-wrap-anywhere ${message.from_admin
                                   ? "bg-gradient-to-br from-[#F26623]/10 to-[#E55A1F]/20 border-2 border-[#F26623]/20 text-gray-900"
                                   : "bg-gradient-to-br from-gray-100 to-gray-200 border-2 border-gray-200 text-gray-900"
                                 }`}
+                              style={{
+                                wordBreak: "break-word",
+                                overflowWrap: "break-word",
+                                hyphens: "auto",
+                              }}
                             >
-                              <p className="text-sm leading-relaxed">{message.message}</p>
+                              <p className="text-sm leading-relaxed whitespace-pre-wrap">{message.message}</p>
                               {message.from_admin && (
                                 <div className="flex items-center mt-2 text-xs text-[#F26623] font-semibold">
-                                  <CheckCircle className="h-3 w-3 mr-1" />
+                                  <CheckCircle className="h-3 w-3 mr-1 flex-shrink-0" />
                                   Support Team
                                 </div>
                               )}
                             </div>
                             <div className="flex items-center mt-2 text-xs text-gray-500">
-                              <Clock className="h-3 w-3 mr-1" />
+                              <Clock className="h-3 w-3 mr-1 flex-shrink-0" />
                               {new Date(message.created_at).toLocaleString()}
                             </div>
                           </div>
@@ -892,7 +908,11 @@ export default function AdminMessagesPage({ activeTab, onTabChange }: AdminMessa
                         placeholder="Type your response..."
                         rows={3}
                         required
-                        className="border-[#F26623]/30 focus:border-[#F26623] focus:ring-[#F26623]/20 rounded-xl"
+                        className="border-[#F26623]/30 focus:border-[#F26623] focus:ring-[#F26623]/20 rounded-xl resize-none"
+                        style={{
+                          wordBreak: "break-word",
+                          overflowWrap: "break-word",
+                        }}
                       />
                     </div>
                     <Button
