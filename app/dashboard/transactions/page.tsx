@@ -168,11 +168,9 @@ export default function TransactionsPage() {
     }
 
     try {
-      // Import jsPDF
+      // Import jsPDF and autoTable
       const { default: jsPDF } = await import("jspdf")
-
-      // Import and initialize autoTable
-      const autoTable = (await import("jspdf-autotable")).default
+      const { default: autoTable } = await import("jspdf-autotable")
 
       // Create new PDF document
       const doc = new jsPDF()
@@ -187,7 +185,7 @@ export default function TransactionsPage() {
       doc.setTextColor(255, 255, 255)
       doc.setFontSize(24)
       doc.setFont("helvetica", "bold")
-      doc.text("SecureBank", 20, 25)
+      doc.text("Anchor Investments", 20, 25)
 
       // Statement Title
       doc.setFontSize(16)
@@ -216,18 +214,6 @@ export default function TransactionsPage() {
       doc.setFont("helvetica", "normal")
       doc.text(user.email, 80, yPos)
 
-      // Statement Period
-      const firstTransaction = transactions[transactions.length - 1]
-      const lastTransaction = transactions[0]
-      const startDate = firstTransaction ? new Date(firstTransaction.created_at).toLocaleDateString() : "N/A"
-      const endDate = lastTransaction ? new Date(lastTransaction.created_at).toLocaleDateString() : "N/A"
-
-      yPos += 8
-      doc.setFont("helvetica", "bold")
-      doc.text("Statement Period:", 20, yPos)
-      doc.setFont("helvetica", "normal")
-      doc.text(`${startDate} - ${endDate}`, 80, yPos)
-
       yPos += 8
       doc.setFont("helvetica", "bold")
       doc.text("Export Date:", 20, yPos)
@@ -255,13 +241,15 @@ export default function TransactionsPage() {
         .filter((t) => t.type === "withdrawal" || (t.type === "transfer" && t.user_id === user.id))
         .reduce((sum, t) => sum + Number(t.amount), 0)
 
+      // Left side - Transaction summary
       doc.text(`Total Transactions: ${totalTransactions}`, 20, yPos)
       doc.text(`Total Deposits: $${totalDeposits.toFixed(2)}`, 20, yPos + 8)
       doc.text(`Total Withdrawals: $${totalWithdrawals.toFixed(2)}`, 20, yPos + 16)
 
-      // Current Balances
-      yPos += 8
+      // Right side - Current Balances (aligned horizontally)
+      doc.setFont("helvetica", "bold")
       doc.text("Current Balances:", 120, yPos)
+      doc.setFont("helvetica", "normal")
       balances.forEach((balance, index) => {
         doc.text(`${balance.currency}: ${Number(balance.amount).toFixed(2)}`, 120, yPos + 8 + index * 8)
       })
@@ -300,8 +288,8 @@ export default function TransactionsPage() {
         ]
       })
 
-      // Use autoTable function directly
-      autoTable(doc, {
+      // Use autoTable function with proper typing
+      autoTable(doc as any, {
         head: [tableColumns],
         body: tableRows,
         startY: yPos,

@@ -1,18 +1,24 @@
-declare module "jspdf" {
-    interface jsPDF {
-        autoTable: (options: {
-            head?: any[][]
-            body?: any[][]
-            startY?: number
-            styles?: any
-            headStyles?: any
-            alternateRowStyles?: any
-            columnStyles?: any
-        }) => jsPDF
-        lastAutoTable: { finalY: number }
+declare module "jspdf-autotable" {
+    interface AutoTableOptions {
+        head?: any[][]
+        body?: any[][]
+        startY?: number
+        styles?: any
+        headStyles?: any
+        alternateRowStyles?: any
+        columnStyles?: any
+        [key: string]: any
     }
+
+    function autoTable(doc: any, options: AutoTableOptions): void
+
+    export default autoTable
 }
 
-declare module "jspdf-autotable" {
-    // This module extends jsPDF
+declare module "jspdf" {
+    interface jsPDF {
+        lastAutoTable?: {
+            finalY: number
+        }
+    }
 }
