@@ -84,7 +84,8 @@ export default function AdminLayout({ children, activeTab, onTabChange }: AdminL
   }
 
   const tabs = [
-    { id: "users", name: "Users", icon: Users },
+    { id: "user-overview", name: "Users", icon: Users }, // Add this line
+    { id: "users", name: "Online/Offline", icon: Users },
     { id: "kyc", name: "KYC", icon: Shield },
     { id: "balances", name: "Balances", icon: CreditCard },
     { id: "crypto", name: "Crypto", icon: Bitcoin },
@@ -134,8 +135,8 @@ export default function AdminLayout({ children, activeTab, onTabChange }: AdminL
                       key={tab.id}
                       onClick={() => handleTabChange(tab.id)}
                       className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg text-left transition-colors ${activeTab === tab.id
-                          ? "bg-orange-50 text-[#F26623] border border-orange-200"
-                          : "text-gray-700 hover:bg-gray-100"
+                        ? "bg-orange-50 text-[#F26623] border border-orange-200"
+                        : "text-gray-700 hover:bg-gray-100"
                         }`}
                     >
                       <Icon className="h-5 w-5" />
@@ -247,8 +248,8 @@ export default function AdminLayout({ children, activeTab, onTabChange }: AdminL
                     key={tab.id}
                     onClick={() => onTabChange(tab.id)}
                     className={`flex items-center space-x-2 py-4 px-1 border-b-2 font-medium text-sm whitespace-nowrap transition-colors ${activeTab === tab.id
-                        ? "border-[#F26623] text-[#F26623]"
-                        : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                      ? "border-[#F26623] text-[#F26623]"
+                      : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
                       }`}
                   >
                     <Icon className="h-5 w-5" />

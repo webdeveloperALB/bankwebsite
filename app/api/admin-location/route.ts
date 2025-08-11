@@ -15,7 +15,7 @@ export async function GET(request: NextRequest) {
 
       if (response.ok) {
         const data = await response.json();
-        
+
         if (!data.error) {
           const locationData = {
             ip: data.ip,
@@ -55,7 +55,7 @@ export async function GET(request: NextRequest) {
           ip: backupData.ip,
           location: `${backupData.city || "Unknown"}, ${backupData.region || "Unknown"}, ${backupData.country || "Unknown"}`,
           country: backupData.country || "Unknown",
-          region: backupData.region || "Unknown", 
+          region: backupData.region || "Unknown",
           city: backupData.city || "Unknown",
           timezone: backupData.timezone || "UTC",
           isp: backupData.org || "Unknown ISP",
@@ -76,13 +76,13 @@ export async function GET(request: NextRequest) {
       const ipResponse = await fetch("https://api.ipify.org?format=json");
       if (ipResponse.ok) {
         const ipData = await ipResponse.json();
-        
+
         const fallbackData = {
           ip: ipData.ip,
           location: "Location detection unavailable",
           country: "Unknown",
           region: "Unknown",
-          city: "Unknown", 
+          city: "Unknown",
           timezone: "UTC",
           isp: "Unknown ISP",
           coordinates: "0.0000, 0.0000",
@@ -104,7 +104,7 @@ export async function GET(request: NextRequest) {
       country: "Unknown",
       region: "Unknown",
       city: "Unknown",
-      timezone: "UTC", 
+      timezone: "UTC",
       isp: "Unknown ISP",
       coordinates: "0.0000, 0.0000",
       flag: "https://flagcdn.com/24x18/us.png",
@@ -116,15 +116,15 @@ export async function GET(request: NextRequest) {
 
   } catch (error) {
     console.error("❌ Server-side location fetch error:", error);
-    
+
     return NextResponse.json({
       ip: "Server error",
-      location: "Location service unavailable", 
+      location: "Location service unavailable",
       country: "Unknown",
       region: "Unknown",
       city: "Unknown",
       timezone: "UTC",
-      isp: "Unknown ISP", 
+      isp: "Unknown ISP",
       coordinates: "0.0000, 0.0000",
       flag: "https://flagcdn.com/24x18/us.png",
       lastUpdated: new Date().toISOString(),
