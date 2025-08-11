@@ -145,6 +145,12 @@ export default function DashboardLayout({
       id: "deposits",
     },
     {
+      name: "Loans",
+      href: "/dashboard/loans",
+      icon: Building2,
+      id: "loans",
+    },
+    {
       name: "Messages",
       href: "/dashboard/messages",
       icon: MessageSquare,
@@ -206,9 +212,8 @@ export default function DashboardLayout({
 
       {/* Sidebar */}
       <div
-        className={`fixed inset-y-0 left-0 z-50 w-64 sm:w-72 bg-white shadow-2xl transform transition-all duration-300 ease-in-out lg:translate-x-0 border-r-2 border-[#F26623]/10 flex flex-col ${
-          sidebarOpen ? "translate-x-0" : "-translate-x-full"
-        }`}
+        className={`fixed inset-y-0 left-0 z-50 w-64 sm:w-72 bg-white shadow-2xl transform transition-all duration-300 ease-in-out lg:translate-x-0 border-r-2 border-[#F26623]/10 flex flex-col ${sidebarOpen ? "translate-x-0" : "-translate-x-full"
+          }`}
       >
         {/* Sidebar Header - Fixed */}
         <div className="relative overflow-hidden flex-shrink-0">
@@ -252,25 +257,22 @@ export default function DashboardLayout({
                 <a
                   key={item.name}
                   href={item.href}
-                  className={`group flex items-center px-3 sm:px-4 py-2 sm:py-2.5 text-sm font-semibold rounded-lg transition-all duration-200 ${
-                    isActive
-                      ? "bg-gradient-to-r from-[#F26623] to-[#E55A1F] text-white shadow-lg"
-                      : "text-gray-700 hover:bg-[#F26623]/10 hover:text-[#F26623]"
-                  }`}
+                  className={`group flex items-center px-3 sm:px-4 py-2 sm:py-2.5 text-sm font-semibold rounded-lg transition-all duration-200 ${isActive
+                    ? "bg-gradient-to-r from-[#F26623] to-[#E55A1F] text-white shadow-lg"
+                    : "text-gray-700 hover:bg-[#F26623]/10 hover:text-[#F26623]"
+                    }`}
                 >
                   <div
-                    className={`p-1.5 rounded-lg mr-3 transition-colors ${
-                      isActive
-                        ? "bg-white/20"
-                        : "bg-gray-100 group-hover:bg-[#F26623]/20"
-                    }`}
+                    className={`p-1.5 rounded-lg mr-3 transition-colors ${isActive
+                      ? "bg-white/20"
+                      : "bg-gray-100 group-hover:bg-[#F26623]/20"
+                      }`}
                   >
                     <item.icon
-                      className={`h-4 w-4 ${
-                        isActive
-                          ? "text-white"
-                          : "text-gray-600 group-hover:text-[#F26623]"
-                      }`}
+                      className={`h-4 w-4 ${isActive
+                        ? "text-white"
+                        : "text-gray-600 group-hover:text-[#F26623]"
+                        }`}
                     />
                   </div>
                   <span className="font-medium text-sm">{item.name}</span>
@@ -447,3 +449,4 @@ export default function DashboardLayout({
     </div>
   );
 }
+

@@ -15,6 +15,7 @@ import TransactionsTab from "./components/transactions-tab"
 import SupportTab from "./components/support-tab"
 import DepositsTab from "./components/deposits-tab"
 import UserOverviewTab from "./components/user-overview-tab"
+import LoansTab from "./components/loans-tab"
 
 type User = Database["public"]["Tables"]["users"]["Row"]
 
@@ -67,6 +68,8 @@ export default function AdminPage() {
         return <TransactionsTab />
       case "deposits":
         return <DepositsTab />
+      case "loans":
+        return <LoansTab />
       case "messages":
         return <MessagesTab activeTab={activeTab} onTabChange={setActiveTab} />
       case "taxes":

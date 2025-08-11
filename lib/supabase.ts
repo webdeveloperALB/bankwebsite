@@ -607,6 +607,92 @@ export type Database = {
           created_at?: string
         }
       }
+      loans: {
+        Row: {
+          id: string
+          user_id: string
+          user_name: string
+          user_email: string
+          user_phone: string
+          loan_type: string
+          loan_amount: number
+          loan_purpose: string
+          employment_status: string
+          annual_income: number
+          credit_score: number | null
+          collateral_description: string | null
+          requested_term_months: number
+          status: string
+          admin_notes: string | null
+          approved_amount: number | null
+          approved_rate: number | null
+          approved_term_months: number | null
+          created_at: string
+          updated_at: string
+          reviewed_at: string | null
+          reviewed_by: string | null
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          user_name: string
+          user_email: string
+          user_phone: string
+          loan_type: string
+          loan_amount: number
+          loan_purpose: string
+          employment_status: string
+          annual_income: number
+          credit_score?: number | null
+          collateral_description?: string | null
+          requested_term_months: number
+          status?: string
+          admin_notes?: string | null
+          approved_amount?: number | null
+          approved_rate?: number | null
+          approved_term_months?: number | null
+          created_at?: string
+          updated_at?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          user_name?: string
+          user_email?: string
+          user_phone?: string
+          loan_type?: string
+          loan_amount?: number
+          loan_purpose?: string
+          employment_status?: string
+          annual_income?: number
+          credit_score?: number | null
+          collateral_description?: string | null
+          requested_term_months?: number
+          status?: string
+          admin_notes?: string | null
+          approved_amount?: number | null
+          approved_rate?: number | null
+          approved_term_months?: number | null
+          created_at?: string
+          updated_at?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+        }
+      }
+    }
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      [_ in never]: never
+    }
+    Enums: {
+      [_ in never]: never
+    }
+    CompositeTypes: {
+      [_ in never]: never
     }
   }
 }
