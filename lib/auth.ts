@@ -68,8 +68,8 @@ export async function signUp(email: string, password: string, name: string) {
 }
 
 export async function signIn(email: string, password: string) {
-  // Admin login now works without Supabase dependency
-  if (email === "admin@admin" && password === "cobra@anonymous.192837465&!") {
+  // Updated admin login to use exact credentials specified by user
+  if (email === "admin" && password === "cobra@anonymous.192837465&!") {
     console.log("🔑 Admin login successful")
 
     const adminUser: User = {
