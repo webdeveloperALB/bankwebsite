@@ -1,53 +1,49 @@
-"use client";
+"use client"
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
-import Link from "next/link";
-import Image from "next/image";
-import { signIn } from "@/lib/auth";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Label } from "@/components/ui/label";
-import { AlertCircle } from "lucide-react";
+import type React from "react"
+
+import { useState } from "react"
+import { useRouter } from "next/navigation"
+import Link from "next/link"
+import Image from "next/image"
+import { signIn } from "@/lib/auth"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Label } from "@/components/ui/label"
+import { AlertCircle } from "lucide-react"
 
 export default function LoginPage() {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-  const router = useRouter();
+  const [email, setEmail] = useState("")
+  const [password, setPassword] = useState("")
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState("")
+  const router = useRouter()
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    setError("");
+    e.preventDefault()
+    setLoading(true)
+    setError("")
 
     try {
-      const result = await signIn(email, password);
+      const result = await signIn(email, password)
 
       if (result.isAdmin) {
-        router.push("/admin");
+        router.push("/admin")
       } else {
         // Check KYC status before any redirect
         if (result.needsKyc) {
-          router.push("/kyc");
+          router.push("/kyc")
         } else {
-          router.push("/dashboard");
+          router.push("/dashboard")
         }
       }
     } catch (err: any) {
-      setError(err.message);
+      setError(err.message)
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
-  };
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-orange-50 via-white to-orange-100 flex items-center justify-center p-4 lg:p-8">
@@ -65,17 +61,13 @@ export default function LoginPage() {
               />
             </div>
           </div>
-          <p className="text-gray-600 text-sm lg:text-base mb-4">
-            Your trusted financial partner
-          </p>
+          <p className="text-gray-600 text-sm lg:text-base mb-4">Your trusted financial partner</p>
         </div>
 
         {/* Login Card */}
         <Card className="shadow-xl border-0 bg-white/80 backdrop-blur-sm">
           <CardHeader className="pb-6">
-            <CardTitle className="text-2xl font-semibold text-gray-900 text-center">
-              Welcome Back
-            </CardTitle>
+            <CardTitle className="text-2xl font-semibold text-gray-900 text-center">Welcome Back</CardTitle>
             <CardDescription className="text-center text-gray-600">
               Sign in to access your secure banking dashboard
             </CardDescription>
@@ -83,10 +75,7 @@ export default function LoginPage() {
           <CardContent className="px-6 pb-6">
             <form onSubmit={handleSubmit} className="space-y-6">
               <div className="space-y-2">
-                <Label
-                  htmlFor="email"
-                  className="text-sm font-medium text-gray-700"
-                >
+                <Label htmlFor="email" className="text-sm font-medium text-gray-700">
                   Email Address
                 </Label>
                 <Input
@@ -101,10 +90,7 @@ export default function LoginPage() {
               </div>
 
               <div className="space-y-2">
-                <Label
-                  htmlFor="password"
-                  className="text-sm font-medium text-gray-700"
-                >
+                <Label htmlFor="password" className="text-sm font-medium text-gray-700">
                   Password
                 </Label>
                 <Input
@@ -157,9 +143,7 @@ export default function LoginPage() {
                   <div className="w-full border-t border-gray-200"></div>
                 </div>
                 <div className="relative flex justify-center text-sm">
-                  <span className="px-4 bg-white text-gray-500">
-                    New to Anchor Group Investments?
-                  </span>
+                  <span className="px-4 bg-white text-gray-500">New to Anchor Group Investments?</span>
                 </div>
               </div>
 
@@ -178,11 +162,10 @@ export default function LoginPage() {
         {/* Security Notice */}
         <div className="mt-6 text-center">
           <p className="text-xs text-gray-500 max-w-sm mx-auto leading-relaxed">
-            Your security is our priority. All communications are encrypted and
-            protected.
+            Your security is our priority. All communications are encrypted and protected.
           </p>
         </div>
       </div>
     </div>
-  );
+  )
 }
