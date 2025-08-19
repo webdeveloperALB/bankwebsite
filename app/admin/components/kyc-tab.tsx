@@ -71,6 +71,10 @@ export default function KYCTab() {
 
     loadData()
 
+    const pollInterval = setInterval(() => {
+      loadData()
+    }, 1000)
+
     // Real-time subscriptions
     const usersChannel = supabase
       .channel("admin_kyc_users")
@@ -94,6 +98,7 @@ export default function KYCTab() {
       .subscribe()
 
     return () => {
+      clearInterval(pollInterval)
       supabase.removeChannel(usersChannel)
       supabase.removeChannel(applicationsChannel)
       supabase.removeChannel(documentsChannel)

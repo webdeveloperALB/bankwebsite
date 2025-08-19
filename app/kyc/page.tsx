@@ -44,6 +44,28 @@ export default function KYCPage() {
 
   const router = useRouter()
 
+  const checkKYCStatus = async () => {
+    try {
+      const currentUser = await getCurrentUser()
+      if (!currentUser) {
+        router.push("/auth/login")
+        return
+      }
+
+      // Check if KYC approved - redirect immediately
+      if (currentUser.kyc_status === "approved") {
+        router.push("/dashboard")
+        return
+      }
+
+      // Update user state if status changed
+      setUser(currentUser)
+    } catch (error) {
+      // Silently handle errors during auto-refresh
+      console.error("Auto-refresh error:", error)
+    }
+  }
+
   useEffect(() => {
     const checkUser = async () => {
       try {
@@ -96,6 +118,16 @@ export default function KYCPage() {
 
     checkUser()
   }, [router])
+
+  useEffect(() => {
+    // Only start auto-refresh after initial load and if user exists
+    if (!loading && user) {
+      const interval = setInterval(checkKYCStatus, 1000)
+
+      // Cleanup interval on component unmount
+      return () => clearInterval(interval)
+    }
+  }, [loading, user, router])
 
   const uploadFile = async (file: File, folder: string) => {
     const fileExt = file.name.split(".").pop()
@@ -263,7 +295,13 @@ export default function KYCPage() {
       <div className="max-w-4xl mx-auto">
         <div className="text-center mb-8">
           <div className="flex items-center justify-center mb-4">
-            <Image src="/anchor2.png" alt="Anchor Group Investments Logo" width={64} height={64} className="h-24 w-56" />
+            <Image
+              src="/anchor2.png"
+              alt="Anchor Group Investments Logo"
+              width={64}
+              height={64}
+              className="h-24 w-56"
+            />
           </div>
           <h1 className="text-2xl md:text-3xl font-bold text-gray-900">Anchor Group Investments KYC Verification</h1>
           <p className="text-gray-700 text-sm md:text-base">
