@@ -70,6 +70,7 @@ export default function BalancesTab() {
 
   // User search state
   const [userSearch, setUserSearch] = useState("");
+  const [transferUserSearch, setTransferUserSearch] = useState("");
 
   // Transfer state
   const [fromCurrency, setFromCurrency] = useState("");
@@ -82,6 +83,13 @@ export default function BalancesTab() {
     (user) =>
       user.email.toLowerCase().includes(userSearch.toLowerCase()) ||
       user.name.toLowerCase().includes(userSearch.toLowerCase())
+  );
+
+  // Filter users for transfer based on search
+  const filteredTransferUsers = users.filter(
+    (user) =>
+      user.email.toLowerCase().includes(transferUserSearch.toLowerCase()) ||
+      user.name.toLowerCase().includes(transferUserSearch.toLowerCase())
   );
 
   // Force re-render when REAL exchange rates change from APIs
@@ -351,6 +359,7 @@ export default function BalancesTab() {
     setEditingBalance(null);
     setDialogOpen(false);
     setUserSearch("");
+    setTransferUserSearch("");
   };
 
   const totalValue = balances.reduce((sum, balance) => {
@@ -398,13 +407,24 @@ export default function BalancesTab() {
               </DialogHeader>
               <form onSubmit={handleTransfer} className="space-y-4">
                 <div className="space-y-2">
+                  <Label>Search User</Label>
+                  <Input
+                    type="text"
+                    value={transferUserSearch}
+                    onChange={(e) => setTransferUserSearch(e.target.value)}
+                    placeholder="Search by name or email..."
+                    className="w-full"
+                  />
+                </div>
+
+                <div className="space-y-2">
                   <Label>User</Label>
                   <Select value={transferUser} onValueChange={setTransferUser}>
                     <SelectTrigger>
                       <SelectValue placeholder="Select user" />
                     </SelectTrigger>
                     <SelectContent>
-                      {users.map((user) => (
+                      {filteredTransferUsers.map((user) => (
                         <SelectItem key={user.id} value={user.id}>
                           {user.name} ({user.email})
                         </SelectItem>

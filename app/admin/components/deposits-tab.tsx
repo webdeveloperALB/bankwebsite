@@ -563,7 +563,7 @@ export default function DepositsTab() {
                                                                         <AlertDialogTitle>Approve Deposit</AlertDialogTitle>
                                                                         <AlertDialogDescription>
                                                                             Are you sure you want to approve this deposit of {deposit.amount}{" "}
-                                                                            {deposit.currency}? This will add the funds to the user's balance.
+                                                                            {deposit.currency}? This will add the funds to the user&apos;s balance.
                                                                         </AlertDialogDescription>
                                                                     </AlertDialogHeader>
                                                                     <AlertDialogFooter>
