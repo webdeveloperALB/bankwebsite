@@ -259,24 +259,8 @@ export default function CryptoPage() {
 
                 <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
                   <DialogTrigger asChild>
-                    <Button className="bg-white text-[#F26623] hover:bg-gray-100 font-semibold shadow-lg">
-                      <Plus className="h-4 w-4 mr-2" />
-                      <span className="hidden sm:inline">
-                        Add Digital Asset
-                      </span>
-                      <span className="sm:hidden">Add Asset</span>
-                    </Button>
                   </DialogTrigger>
                   <DialogContent className="sm:max-w-md">
-                    <DialogHeader>
-                      <DialogTitle className="text-[#F26623] text-xl font-bold flex items-center">
-                        <Coins className="h-5 w-5 mr-2" />
-                        Add Digital Asset
-                      </DialogTitle>
-                      <DialogDescription className="text-gray-600">
-                        Add cryptocurrency to your professional portfolio
-                      </DialogDescription>
-                    </DialogHeader>
                     <form onSubmit={handleAddCrypto} className="space-y-6">
                       <div className="space-y-2">
                         <Label
