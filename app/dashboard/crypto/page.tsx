@@ -584,14 +584,6 @@ export default function CryptoPage() {
               Build a diversified cryptocurrency portfolio with
               institutional-grade security and real-time market data
             </p>
-            <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-              <DialogTrigger asChild>
-                <Button className="bg-gradient-to-r from-[#F26623] to-[#E55A1F] hover:from-[#E55A1F] hover:to-[#D94E1A] text-white font-semibold px-8 py-4 text-base sm:text-lg">
-                  <Plus className="h-5 w-5 mr-2" />
-                  Add Your First Digital Asset
-                </Button>
-              </DialogTrigger>
-            </Dialog>
           </div>
         )}
       </div>
